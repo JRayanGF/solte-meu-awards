@@ -1,0 +1,119 @@
+import { useEffect, useState, useCallback, FormEvent } from 'react'
+import { adminClient as sb } from './supabase'
+import { errMsg } from './lib'
+import { Brand } from './App'
+
+type Rank = { id: string; name: string; votes: number; is_official: boolean; suggested_by: string | null }
+type Part = { id: string; name: string; finalized_at: string | null; created_at: string }
+
+const csvCell = (v: string | number | boolean) => {
+  let s = String(v); if (/^[=+\-@]/.test(s)) s = "'" + s
+  return `"${s.replace(/"/g, '""')}"`
+}
+
+export default function Admin() {
+  const [state, setState] = useState<'load' | 'login' | 'ok' | 'denied'>('load')
+  const [err, setErr] = useState(''); const [email, setEmail] = useState(''); const [pw, setPw] = useState('')
+  const [rank, setRank] = useState<Rank[]>([]); const [parts, setParts] = useState<Part[]>([]); const [stage, setStage] = useState('')
+
+  const check = useCallback(async () => {
+    const { data: { session } } = await sb.auth.getSession()
+    if (!session) return setState('login')
+    const { data, error } = await sb.rpc('is_admin')
+    if (error) { setErr(errMsg(error)); return setState('login') }
+    setState(data ? 'ok' : 'denied')
+  }, [])
+  useEffect(() => { check() }, [check])
+
+  const load = useCallback(async () => {
+    const [r, p, s] = await Promise.all([
+      sb.from('category_ranking').select('*').order('votes', { ascending: false }).order('created_at'),
+      sb.from('participants').select('id,name,finalized_at,created_at').order('created_at'),
+      sb.from('app_settings').select('stage').eq('id', 1).single()])
+    const e = r.error || p.error || s.error
+    if (e) return setErr(errMsg(e))
+    setRank(r.data as Rank[]); setParts(p.data as Part[]); setStage(s.data!.stage)
+  }, [])
+  useEffect(() => {
+    if (state !== 'ok') return
+    load(); const t = setInterval(load, 10000); return () => clearInterval(t)
+  }, [state, load])
+
+  async function login(e: FormEvent) {
+    e.preventDefault(); setErr('')
+    const { error } = await sb.auth.signInWithPassword({ email, password: pw })
+    if (error) return setErr('E-mail ou senha inválidos.')
+    check()
+  }
+  const logout = async () => { await sb.auth.signOut(); setState('login') }
+
+  async function close() {
+    if (!confirm('Encerrar a primeira etapa? As 15 mais votadas viram oficiais e ninguém mais poderá votar.')) return
+    const { error } = await sb.rpc('close_stage1'); if (error) setErr(errMsg(error)); else load()
+  }
+  async function remove(p: Part) {
+    if (!confirm(`Remover ${p.name} e as escolhas dele(a)?`)) return
+    const { error } = await sb.from('participants').delete().eq('id', p.id); if (error) setErr(errMsg(error)); else load()
+  }
+  function exportCsv() {
+    const by = new Map(parts.map(p => [p.id, p.name]))
+    const rows = [['posicao', 'categoria', 'votos', 'sugerida_por', 'top15'],
+      ...rank.map((r, i) => [i + 1, r.name, r.votes, r.suggested_by ? by.get(r.suggested_by) ?? '' : '', i < 15 ? 'sim' : 'nao'])]
+    const csv = '\ufeff' + rows.map(r => r.map(csvCell).join(',')).join('\r\n')
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
+    a.download = 'solte-meu-awards-resultados.csv'; a.click(); URL.revokeObjectURL(a.href)
+  }
+
+  if (state === 'load') return <main className="stage hero"><Brand /><p className="lead pulse">Verificando acesso…</p></main>
+  if (state !== 'ok') return (
+    <main className="stage hero"><Brand />
+      <form onSubmit={login} className="card register">
+        <label htmlFor="e">Área do administrador</label>
+        <input id="e" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="E-mail" autoComplete="username" required />
+        <input type="password" value={pw} onChange={e => setPw(e.target.value)} placeholder="Senha" autoComplete="current-password" required />
+        {state === 'denied' && <p className="err">Esta conta não é administradora.</p>}
+        {err && <p className="err" role="alert">{err}</p>}
+        <button className="gold">Entrar</button>
+      </form>
+    </main>)
+
+  const by = new Map(parts.map(p => [p.id, p.name]))
+  const done = parts.filter(p => p.finalized_at).length
+  const open = stage === 'categories_open'
+  return (
+    <main className="stage admin">
+      <header className="top"><Brand small /><button className="ghost" onClick={logout}>Sair</button></header>
+      <div className="stats">
+        <div className="card"><b>{parts.length}</b>participantes</div>
+        <div className="card"><b>{done}</b>finalizaram</div>
+        <div className="card"><b>{rank.length}</b>categorias</div>
+        <div className="card"><b>{open ? 'Aberta' : 'Encerrada'}</b>etapa 1</div>
+      </div>
+      <div className="row actions">
+        <button className="ghost" onClick={exportCsv}>Exportar CSV</button>
+        <button className="ghost" onClick={load}>Atualizar</button>
+        <button className="gold" onClick={close} disabled={!open}>Encerrar etapa 1</button>
+      </div>
+      {err && <p className="err" role="alert">{err}</p>}
+
+      <h2 className="title">Ranking das categorias</h2>
+      <div className="scroll"><table>
+        <thead><tr><th>#</th><th>Categoria</th><th>Votos</th><th>Sugerida por</th></tr></thead>
+        <tbody>{rank.map((r, i) => (
+          <tr key={r.id} className={i < 15 ? 'top15' : ''}>
+            <td>{i + 1}</td><td>{r.name}{r.is_official && ' 🏆'}</td><td>{r.votes}</td><td>{r.suggested_by ? by.get(r.suggested_by) ?? '—' : '—'}</td>
+          </tr>))}</tbody>
+      </table></div>
+      <p className="hint">Linhas douradas = as 15 mais votadas (desempate por antiguidade).</p>
+
+      <h2 className="title">Participantes</h2>
+      <div className="scroll"><table>
+        <thead><tr><th>Nome</th><th>Status</th><th>Cadastro</th><th></th></tr></thead>
+        <tbody>{parts.map(p => (
+          <tr key={p.id}><td>{p.name}</td><td>{p.finalized_at ? 'Finalizou' : 'Em andamento'}</td>
+            <td>{new Date(p.created_at).toLocaleString('pt-BR')}</td>
+            <td><button className="link" onClick={() => remove(p)}>Remover</button></td></tr>))}</tbody>
+      </table></div>
+    </main>)
+}
