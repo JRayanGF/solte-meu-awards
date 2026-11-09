@@ -129,6 +129,23 @@ begin
   update app_settings set stage = 'categories_closed' where id = 1;
 end $$;
 
+-- Reset total (admin): apaga participantes, votos e sugestões; restaura as 12 categorias e reabre a etapa 1
+create function public.reset_all() returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if not is_admin() then raise exception 'Acesso negado.'; end if;
+  alter table public.category_selections disable trigger trg_guard_selection;
+  delete from public.category_selections;
+  delete from public.participants;
+  delete from public.categories;
+  alter table public.category_selections enable trigger trg_guard_selection;
+  insert into public.categories (name) values
+    ('Mais Urubu'),('Mais FDP'),('Vai ser pego na Croco'),('Mais Vida Mansa'),
+    ('Trabalho Mais Pesado'),('Mais Liso'),('Fígado de Ferro'),('Solte Minha Camisa'),
+    ('Melhor Motorista'),('Menos Urubu'),('Mais Sumido'),('Mais Rico');
+  update public.app_settings set stage = 'categories_open' where id = 1;
+end $$;
+
 -- ===== RLS =====
 alter table public.app_settings enable row level security;
 alter table public.admins enable row level security;
@@ -163,7 +180,7 @@ create policy sel_delete on public.category_selections for delete to authenticat
 
 revoke all on all tables in schema public from anon;
 revoke execute on all functions in schema public from anon, public;
-grant execute on function public.is_admin(), public.suggest_category(text), public.close_stage1() to authenticated;
+grant execute on function public.is_admin(), public.suggest_category(text), public.close_stage1(), public.reset_all() to authenticated;
 
 -- ===== Realtime =====
 alter publication supabase_realtime add table public.categories, public.app_settings;

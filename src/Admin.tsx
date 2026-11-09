@@ -51,6 +51,14 @@ export default function Admin() {
     if (!confirm('Encerrar a primeira etapa? As 15 mais votadas viram oficiais e ninguém mais poderá votar.')) return
     const { error } = await sb.rpc('close_stage1'); if (error) setErr(errMsg(error)); else load()
   }
+  async function resetAll() {
+    const t = prompt('ATENÇÃO: isso apaga TODOS os participantes, votos e categorias sugeridas, e reabre a etapa 1.\n\nPara confirmar, digite RESETAR:')
+    if (t?.trim().toUpperCase() !== 'RESETAR') return
+    setErr('')
+    const { error } = await sb.rpc('reset_all')
+    if (error) return setErr(errMsg(error))
+    load()
+  }
   async function remove(p: Part) {
     if (!confirm(`Remover ${p.name} e as escolhas dele(a)?`)) return
     const { error } = await sb.from('participants').delete().eq('id', p.id); if (error) setErr(errMsg(error)); else load()
@@ -94,6 +102,7 @@ export default function Admin() {
         <button className="ghost" onClick={exportCsv}>Exportar CSV</button>
         <button className="ghost" onClick={load}>Atualizar</button>
         <button className="gold" onClick={close} disabled={!open}>Encerrar etapa 1</button>
+        <button className="danger" onClick={resetAll}>Reset</button>
       </div>
       {err && <p className="err" role="alert">{err}</p>}
 

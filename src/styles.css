@@ -32,6 +32,8 @@ button:disabled{opacity:.45;cursor:not-allowed}
 .gold{background:linear-gradient(135deg,var(--gold2),var(--gold) 60%,#a8791f);color:#201807;box-shadow:0 4px 18px #d9b24c33}
 .gold:not(:disabled):active{transform:scale(.98)}
 .ghost{background:transparent;border-color:var(--gold);color:var(--gold2)}
+.danger{background:transparent;border-color:var(--bad);color:var(--bad);margin-left:auto}
+.danger:hover{background:#ff8a7a1a}
 .link{background:none;border:0;color:var(--bad);padding:.2rem;font-size:.9rem}
 .err{color:var(--bad);margin:.6rem 0;font-size:.95rem}
 .row{display:flex;gap:.6rem}.row input{flex:1}
