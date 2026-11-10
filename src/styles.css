@@ -4,7 +4,7 @@
 html{color-scheme:dark}
 body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 var(--sans);min-height:100vh;
 background-image:radial-gradient(60rem 30rem at 50% -10%,#3a2d12 0%,transparent 60%)}
-.stage{max-width:680px;margin:0 auto;padding:1.25rem 1rem 7rem}
+.stage{max-width:680px;margin:0 auto;padding:1.25rem 1rem 11rem}
 .stage.admin{max-width:900px}
 .hero{min-height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding-bottom:2rem}
 .brand{display:flex;flex-direction:column;align-items:center;gap:.5rem}
@@ -44,7 +44,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
 .cat.on{border-color:var(--gold);background:#1d1810}
 .cat.on .box{background:var(--gold);border-color:var(--gold);color:#201807;transform:scale(1.08)}
 .suggest{margin-top:1.25rem;display:flex;flex-direction:column;gap:.6rem}
-.bar{position:fixed;left:0;right:0;bottom:0;display:flex;justify-content:space-between;align-items:center;gap:1rem;padding:.8rem 1rem calc(.8rem + env(safe-area-inset-bottom));background:#0b0a10ee;backdrop-filter:blur(8px);border-top:1px solid var(--gold)}
+.bar{position:fixed;left:0;right:0;bottom:0;display:flex;justify-content:space-between;align-items:center;gap:1rem;padding:.8rem 1rem calc(4.6rem + env(safe-area-inset-bottom));background:#0b0a10ee;backdrop-filter:blur(8px);border-top:1px solid var(--gold)}
 .count{font-size:1.05rem}.count b{font:800 1.8rem var(--serif);color:var(--gold2)}
 .modal{position:fixed;inset:0;background:#000b;display:grid;place-items:center;padding:1rem;z-index:10}
 .modal .card{max-width:380px;animation:pop .2s ease}.modal .row{justify-content:flex-end;margin-top:1rem}
