@@ -141,8 +141,10 @@ begin
   alter table public.category_selections enable trigger trg_guard_selection;
   insert into public.categories (name) values
     ('Mais Urubu'),('Mais FDP'),('Vai ser pego na Croco'),('Mais Vida Mansa'),
-    ('Trabalho Mais Pesado'),('Mais Liso'),('Fígado de Ferro'),('Solte Minha Camisa'),
-    ('Melhor Motorista'),('Menos Urubu'),('Mais Sumido'),('Mais Rico');
+    ('Trabalho Mais Pesado'),('Mais Liso'),('Fígado de Ferro'),('Melhor Motorista'),
+    ('Menos Urubu'),('Mais Sumido'),('Mais Rico'),('Mais Dramático'),('Mais Atrasado'),
+    ('Mais Emocionado'),('Mais Sem Noção'),('Maior redenção do ano'),('Mais Gado'),
+    ('Mais Pobre'),('Mais Sonhador');
   update public.app_settings set stage = 'categories_open' where id = 1;
 end $$;
 
@@ -188,6 +190,8 @@ alter publication supabase_realtime add table public.categories, public.app_sett
 -- ===== Categorias iniciais =====
 insert into public.categories (name) values
  ('Mais Urubu'),('Mais FDP'),('Vai ser pego na Croco'),('Mais Vida Mansa'),
- ('Trabalho Mais Pesado'),('Mais Liso'),('Fígado de Ferro'),('Solte Minha Camisa'),
- ('Melhor Motorista'),('Menos Urubu'),('Mais Sumido'),('Mais Rico')
+ ('Trabalho Mais Pesado'),('Mais Liso'),('Fígado de Ferro'),('Melhor Motorista'),
+ ('Menos Urubu'),('Mais Sumido'),('Mais Rico'),('Mais Dramático'),('Mais Atrasado'),
+ ('Mais Emocionado'),('Mais Sem Noção'),('Maior redenção do ano'),('Mais Gado'),
+ ('Mais Pobre'),('Mais Sonhador')
 on conflict (name_key) do nothing;
