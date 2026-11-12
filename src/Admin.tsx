@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, FormEvent } from 'react'
 import { adminClient as sb } from './supabase'
 import { errMsg } from './lib'
 import { Brand } from './App'
+import { downloadTop15 } from './topImage'
 
 type Rank = { id: string; name: string; votes: number; is_official: boolean; suggested_by: string | null }
 type Part = { id: string; name: string; finalized_at: string | null; created_at: string }
@@ -63,6 +64,11 @@ export default function Admin() {
     if (!confirm(`Remover ${p.name} e as escolhas dele(a)?`)) return
     const { error } = await sb.from('participants').delete().eq('id', p.id); if (error) setErr(errMsg(error)); else load()
   }
+  async function baixarImagem() {
+    setErr('')
+    try { await downloadTop15(rank.slice(0, 15).map(r => ({ name: r.name, votes: r.votes }))) }
+    catch (e) { setErr(errMsg(e)) }
+  }
   function exportCsv() {
     const by = new Map(parts.map(p => [p.id, p.name]))
     const rows = [['posicao', 'categoria', 'votos', 'sugerida_por', 'top15'],
@@ -99,6 +105,7 @@ export default function Admin() {
         <div className="card"><b>{open ? 'Aberta' : 'Encerrada'}</b>votação</div>
       </div>
       <div className="row actions">
+        <button className="ghost" onClick={baixarImagem}>Baixar Top 15 (imagem)</button>
         <button className="ghost" onClick={exportCsv}>Exportar CSV</button>
         <button className="ghost" onClick={load}>Atualizar</button>
         <button className="gold" onClick={close} disabled={!open}>{open ? 'Encerrar votação' : 'Votação encerrada'}</button>
