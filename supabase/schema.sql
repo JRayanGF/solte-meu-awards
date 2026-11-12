@@ -123,22 +123,23 @@ create function public.close_stage1() returns void
 language plpgsql security definer set search_path = public as $$
 begin
   if not is_admin() then raise exception 'Acesso negado.'; end if;
-  update categories set is_official = false;
+  update categories set is_official = false where is_official;
   update categories set is_official = true where id in (
     select c.id from categories c left join category_selections s on s.category_id = c.id
     group by c.id order by count(s.category_id) desc, c.tiebreak desc, c.created_at limit 15);
   update app_settings set stage = 'categories_closed' where id = 1;
 end $$;
 
+-- (Supabase usa pg_safeupdate: todo UPDATE/DELETE precisa de WHERE)
 -- Reset total (admin): apaga participantes, votos e sugestões; restaura as 12 categorias e reabre a etapa 1
 create function public.reset_all() returns void
 language plpgsql security definer set search_path = public as $$
 begin
   if not is_admin() then raise exception 'Acesso negado.'; end if;
   alter table public.category_selections disable trigger trg_guard_selection;
-  delete from public.category_selections;
-  delete from public.participants;
-  delete from public.categories;
+  delete from public.category_selections where true;
+  delete from public.participants where true;
+  delete from public.categories where true;
   alter table public.category_selections enable trigger trg_guard_selection;
   insert into public.categories (name) values
     ('Mais Urubu'),('Mais FDP'),('Vai ser pego na Croco'),('Mais Vida Mansa'),
