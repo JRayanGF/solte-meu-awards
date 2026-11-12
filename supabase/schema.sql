@@ -27,6 +27,7 @@ create table public.categories (
   name_key text generated always as (lower(btrim(regexp_replace(name, '\s+', ' ', 'g')))) stored unique,
   suggested_by uuid references public.participants on delete set null,
   is_official boolean not null default false,   -- marcada ao encerrar a etapa 1
+  tiebreak int not null default 0,              -- desempate manual (maior = melhor posição entre empatados)
   created_at timestamptz not null default now()
 );
 
@@ -48,7 +49,7 @@ create table public.winner_votes (
 
 create view public.category_ranking with (security_invoker = true) as
   select c.id, c.name, c.is_official, c.suggested_by, c.created_at,
-         count(s.category_id)::int as votes
+         count(s.category_id)::int as votes, c.tiebreak
   from public.categories c
   left join public.category_selections s on s.category_id = c.id
   group by c.id;
@@ -125,7 +126,7 @@ begin
   update categories set is_official = false;
   update categories set is_official = true where id in (
     select c.id from categories c left join category_selections s on s.category_id = c.id
-    group by c.id order by count(s.category_id) desc, c.created_at limit 15);
+    group by c.id order by count(s.category_id) desc, c.tiebreak desc, c.created_at limit 15);
   update app_settings set stage = 'categories_closed' where id = 1;
 end $$;
 

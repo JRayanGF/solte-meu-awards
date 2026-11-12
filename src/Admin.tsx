@@ -28,7 +28,7 @@ export default function Admin() {
 
   const load = useCallback(async () => {
     const [r, p, s] = await Promise.all([
-      sb.from('category_ranking').select('*').order('votes', { ascending: false }).order('created_at'),
+      sb.from('category_ranking').select('*').order('votes', { ascending: false }).order('tiebreak', { ascending: false }).order('created_at'),
       sb.from('participants').select('id,name,finalized_at,created_at').order('created_at'),
       sb.from('app_settings').select('stage').eq('id', 1).single()])
     const e = r.error || p.error || s.error
