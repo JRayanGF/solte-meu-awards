@@ -4,7 +4,7 @@ import { errMsg } from './lib'
 import { Brand } from './App'
 import { downloadTop15 } from './topImage'
 
-type Rank = { id: string; name: string; votes: number; is_official: boolean; suggested_by: string | null }
+type Rank = { id: string; name: string; votes: number; is_official: boolean; suggested_by: string | null; replaced_by: string | null }
 type Part = { id: string; name: string; finalized_at: string | null; created_at: string }
 
 const csvCell = (v: string | number | boolean) => {
@@ -16,6 +16,7 @@ export default function Admin() {
   const [state, setState] = useState<'load' | 'login' | 'ok' | 'denied'>('load')
   const [err, setErr] = useState(''); const [email, setEmail] = useState(''); const [pw, setPw] = useState('')
   const [rank, setRank] = useState<Rank[]>([]); const [parts, setParts] = useState<Part[]>([]); const [stage, setStage] = useState('')
+  const [sub, setSub] = useState<Rank | null>(null); const [subVal, setSubVal] = useState('')
 
   const check = useCallback(async () => {
     const { data: { session } } = await sb.auth.getSession()
@@ -60,13 +61,21 @@ export default function Admin() {
     if (error) return setErr(errMsg(error))
     load()
   }
+  function openSub(r: Rank) { setSub(r); setSubVal(r.replaced_by ?? '') }
+  async function saveSub() {
+    if (!sub) return
+    setErr('')
+    const { error } = await sb.from('categories').update({ replaced_by: subVal || null }).eq('id', sub.id)
+    if (error) return setErr(errMsg(error))
+    setSub(null); load()
+  }
   async function remove(p: Part) {
     if (!confirm(`Remover ${p.name} e as escolhas dele(a)?`)) return
     const { error } = await sb.from('participants').delete().eq('id', p.id); if (error) setErr(errMsg(error)); else load()
   }
   async function baixarImagem() {
     setErr('')
-    try { await downloadTop15(rank.slice(0, 15).map(r => ({ name: r.name, votes: r.votes }))) }
+    try { await downloadTop15(rank.slice(0, 15).map(r => ({ name: r.name, votes: r.votes, replacedBy: r.replaced_by ? rank.find(x => x.id === r.replaced_by)?.name : undefined }))) }
     catch (e) { setErr(errMsg(e)) }
   }
   function exportCsv() {
@@ -115,10 +124,11 @@ export default function Admin() {
 
       <h2 className="title">Ranking das categorias</h2>
       <div className="scroll"><table>
-        <thead><tr><th>#</th><th>Categoria</th><th>Votos</th><th>Sugerida por</th></tr></thead>
+        <thead><tr><th>#</th><th>Categoria</th><th>Votos</th><th>Sugerida por</th><th></th></tr></thead>
         <tbody>{rank.map((r, i) => (
           <tr key={r.id} className={i < 15 ? 'top15' : ''}>
-            <td>{i + 1}</td><td>{r.name}{r.is_official && ' 🏆'}</td><td>{r.votes}</td><td>{r.suggested_by ? by.get(r.suggested_by) ?? '—' : '—'}</td>
+            <td>{i + 1}</td><td>{r.name}{r.is_official && ' 🏆'}{r.replaced_by && <small className="sub"> → substituída por {rank.find(x => x.id === r.replaced_by)?.name ?? '—'}</small>}</td><td>{r.votes}</td><td>{r.suggested_by ? by.get(r.suggested_by) ?? '—' : '—'}</td>
+            <td><button className="link sublink" onClick={() => openSub(r)}>Substituir</button></td>
           </tr>))}</tbody>
       </table></div>
       <p className="hint">Linhas douradas = as 15 mais votadas (desempate por antiguidade).</p>
@@ -131,5 +141,18 @@ export default function Admin() {
             <td>{new Date(p.created_at).toLocaleString('pt-BR')}</td>
             <td><button className="link" onClick={() => remove(p)}>Remover</button></td></tr>))}</tbody>
       </table></div>
+      {sub && (
+        <div className="modal" role="dialog" aria-modal="true">
+          <div className="card">
+            <h3>Substituir “{sub.name}”</h3>
+            <p className="hint">Na imagem do Top 15 vai aparecer “substituída por …” embaixo desta categoria.</p>
+            <select value={subVal} onChange={e => setSubVal(e.target.value)}>
+              <option value="">Sem substituição</option>
+              {rank.filter(r => r.id !== sub.id).map(r => <option key={r.id} value={r.id}>{r.name} ({r.votes} votos)</option>)}
+            </select>
+            <div className="row" style={{ marginTop: '1rem' }}><button className="ghost" onClick={() => setSub(null)}>Cancelar</button><button className="gold" onClick={saveSub}>Salvar</button></div>
+          </div>
+        </div>
+      )}
     </main>)
 }

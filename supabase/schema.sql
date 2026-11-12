@@ -27,6 +27,7 @@ create table public.categories (
   name_key text generated always as (lower(btrim(regexp_replace(name, '\s+', ' ', 'g')))) stored unique,
   suggested_by uuid references public.participants on delete set null,
   is_official boolean not null default false,   -- marcada ao encerrar a etapa 1
+  replaced_by uuid references public.categories(id) on delete set null check (replaced_by is distinct from id), -- só para a imagem do Top 15
   tiebreak int not null default 0,              -- desempate manual (maior = melhor posição entre empatados)
   created_at timestamptz not null default now()
 );
@@ -49,7 +50,7 @@ create table public.winner_votes (
 
 create view public.category_ranking with (security_invoker = true) as
   select c.id, c.name, c.is_official, c.suggested_by, c.created_at,
-         count(s.category_id)::int as votes, c.tiebreak
+         count(s.category_id)::int as votes, c.tiebreak, c.replaced_by
   from public.categories c
   left join public.category_selections s on s.category_id = c.id
   group by c.id;

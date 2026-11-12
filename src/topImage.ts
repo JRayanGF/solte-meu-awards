@@ -1,4 +1,4 @@
-export type TopItem = { name: string; votes: number }
+export type TopItem = { name: string; votes: number; replacedBy?: string }
 const W = 1080, H = 1350
 const GOLD = '#d9b24c', GOLD2 = '#f6e3a1'
 
@@ -40,9 +40,24 @@ export function drawTop15(ctx: CanvasRenderingContext2D, items: TopItem[]) {
     ctx.textAlign = 'center'; ctx.fillStyle = i < 3 ? '#201807' : GOLD2
     ctx.font = `800 24px ${serif}`; ctx.fillText(String(i + 1), 128, cy + 8)
 
-    let size = 34; ctx.textAlign = 'left'; ctx.font = `700 ${size}px ${sans}`
-    while (ctx.measureText(it.name).width > 620 && size > 16) { size--; ctx.font = `700 ${size}px ${sans}` }
-    ctx.fillStyle = i < 3 ? GOLD2 : '#f2ecdc'; ctx.fillText(it.name, 176, cy + size * 0.33)
+    ctx.textAlign = 'left'
+    const fit = (text: string, start: number, weight: number, family: string, maxW: number) => {
+      let sz = start; ctx.font = `${weight} ${sz}px ${family}`
+      while (ctx.measureText(text).width > maxW && sz > 14) { sz--; ctx.font = `${weight} ${sz}px ${family}` }
+      return sz
+    }
+    if (it.replacedBy) {
+      const label = it.name + ' \u{1F3C6}'
+      const sz = fit(label, 28, 700, sans, 640)
+      ctx.fillStyle = i < 3 ? GOLD2 : '#f2ecdc'; ctx.fillText(label, 176, cy - 3)
+      const sub = 'substituída por ' + it.replacedBy
+      fit(sub, 20, 500, sans, 640)
+      ctx.fillStyle = GOLD; ctx.fillText(sub, 176, cy + 22)
+      void sz
+    } else {
+      const sz = fit(it.name, 34, 700, sans, 620)
+      ctx.fillStyle = i < 3 ? GOLD2 : '#f2ecdc'; ctx.fillText(it.name, 176, cy + sz * 0.33)
+    }
 
     ctx.textAlign = 'right'; ctx.fillStyle = '#9a93a8'; ctx.font = `500 24px ${sans}`
     ctx.fillText(`${it.votes} ${it.votes === 1 ? 'voto' : 'votos'}`, W - 104, cy + 8)
