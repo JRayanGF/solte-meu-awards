@@ -18,6 +18,18 @@ export function Brand({ small }: { small?: boolean }) {
   )
 }
 
+export function Closed() {
+  return (
+    <main className="stage hero">
+      <Brand />
+      <div className="card done closed">
+        <h2>Votação encerrada</h2>
+        <p className="lead">Obrigado por participar do SOLTE MEU AWARDS!</p>
+      </div>
+    </main>
+  )
+}
+
 function Register({ onDone }: { onDone: (p: Participant) => void }) {
   const [name, setName] = useState(''); const [err, setErr] = useState(''); const [busy, setBusy] = useState(false)
   async function submit(e: FormEvent) {
@@ -54,7 +66,7 @@ function Setup() {
 
 function Participante() {
   const [p, setP] = useState<Participant | null>(null)
-  const [state, setState] = useState<'load' | 'new' | 'ok' | 'fail'>('load')
+  const [state, setState] = useState<'load' | 'new' | 'ok' | 'fail' | 'closed'>('load')
   const [err, setErr] = useState('')
   async function boot() {
     setState('load'); setErr('')
@@ -66,12 +78,16 @@ function Participante() {
       }
       const { data, error } = await supabase.from('participants').select('id,name,finalized_at').maybeSingle()
       if (error) throw error
-      if (data) { setP(data as Participant); setState('ok') } else setState('new')
+      if (data) { setP(data as Participant); setState('ok'); return }
+      const { data: st, error: e2 } = await supabase.from('app_settings').select('stage').eq('id', 1).single()
+      if (e2) throw e2
+      setState(st.stage === 'categories_open' ? 'new' : 'closed')
     } catch (e) { setErr(errMsg(e)); setState('fail') }
   }
   useEffect(() => { boot() }, [])
   if (state === 'load') return <main className="stage hero"><Brand /><p className="lead pulse">Abrindo o tapete vermelho…</p></main>
   if (state === 'fail') return <main className="stage hero"><Brand /><div className="card"><p className="err" role="alert">{err}</p><button className="gold" onClick={boot}>Tentar de novo</button></div></main>
+  if (state === 'closed') return <Closed />
   if (state === 'new') return <Register onDone={x => { setP(x); setState('ok') }} />
   return <Voting p={p!} onFinal={f => setP({ ...p!, finalized_at: f })} />
 }

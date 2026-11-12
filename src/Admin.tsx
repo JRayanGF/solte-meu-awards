@@ -48,7 +48,7 @@ export default function Admin() {
   const logout = async () => { await sb.auth.signOut(); setState('login') }
 
   async function close() {
-    if (!confirm('Encerrar a primeira etapa? As 15 mais votadas viram oficiais e ninguém mais poderá votar.')) return
+    if (!confirm('Encerrar a votação? Ninguém mais poderá votar nem se cadastrar, e os participantes verão a mensagem "Votação encerrada". As 15 mais votadas viram as categorias oficiais.')) return
     const { error } = await sb.rpc('close_stage1'); if (error) setErr(errMsg(error)); else load()
   }
   async function resetAll() {
@@ -96,12 +96,12 @@ export default function Admin() {
         <div className="card"><b>{parts.length}</b>participantes</div>
         <div className="card"><b>{done}</b>finalizaram</div>
         <div className="card"><b>{rank.length}</b>categorias</div>
-        <div className="card"><b>{open ? 'Aberta' : 'Encerrada'}</b>etapa 1</div>
+        <div className="card"><b>{open ? 'Aberta' : 'Encerrada'}</b>votação</div>
       </div>
       <div className="row actions">
         <button className="ghost" onClick={exportCsv}>Exportar CSV</button>
         <button className="ghost" onClick={load}>Atualizar</button>
-        <button className="gold" onClick={close} disabled={!open}>Encerrar etapa 1</button>
+        <button className="gold" onClick={close} disabled={!open}>{open ? 'Encerrar votação' : 'Votação encerrada'}</button>
         <button className="danger" onClick={resetAll}>Reset</button>
       </div>
       {err && <p className="err" role="alert">{err}</p>}

@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, FormEvent } from 'react'
 import { supabase } from './supabase'
 import { MAX, norm, errMsg } from './lib'
-import { Brand } from './App'
+import { Brand, Closed } from './App'
 
 export type Participant = { id: string; name: string; finalized_at: string | null }
 type Cat = { id: string; name: string; is_official: boolean }
@@ -75,15 +75,16 @@ export default function Voting({ p, onFinal }: { p: Participant; onFinal: (f: st
 
   if (!ready) return <main className="stage hero"><Brand /><p className="lead pulse">Carregando categorias…</p>{err && <p className="err">{err}</p>}</main>
 
+  if (stage !== 'categories_open') return <Closed />
+
   if (locked) {
-    const closed = stage !== 'categories_open'
-    const list = closed ? cats.filter(c => c.is_official) : cats.filter(c => sel.has(c.id))
+    const list = cats.filter(c => sel.has(c.id))
     return (
       <main className="stage hero">
         <Brand />
         <div className="card done">
-          <h2>{closed ? 'Etapa 1 encerrada' : `Valeu, ${p.name}!`}</h2>
-          <p className="lead">{closed ? 'Estas são as 15 categorias oficiais. Em breve: a votação dos vencedores.' : 'Suas escolhas foram registradas. Agora é aguardar o encerramento da etapa.'}</p>
+          <h2>{`Valeu, ${p.name}!`}</h2>
+          <p className="lead">Suas escolhas foram registradas. Agora é aguardar o encerramento da votação.</p>
           <ol className="picked">{list.map(c => <li key={c.id}>{c.name}</li>)}</ol>
         </div>
       </main>

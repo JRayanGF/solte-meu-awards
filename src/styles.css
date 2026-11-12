@@ -61,3 +61,5 @@ th{color:var(--mute);font-weight:500}
 tr.top15 td{background:#d9b24c14}tr.top15 td:first-child{color:var(--gold2);font-weight:700;box-shadow:inset 3px 0 var(--gold)}
 .hint{color:var(--mute);font-size:.85rem}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+.closed{text-align:center}.closed .lead{margin:.6rem auto 0}

@@ -162,7 +162,7 @@ create policy admins_self on public.admins for select to authenticated using (us
 create policy part_select on public.participants for select to authenticated
   using (user_id = auth.uid() or public.is_admin());
 create policy part_insert on public.participants for insert to authenticated
-  with check (user_id = auth.uid());
+  with check (user_id = auth.uid() and (select stage from public.app_settings where id = 1) = 'categories_open');
 create policy part_update on public.participants for update to authenticated
   using (user_id = auth.uid()) with check (user_id = auth.uid());
 create policy part_admin_delete on public.participants for delete to authenticated
