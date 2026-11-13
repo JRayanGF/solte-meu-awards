@@ -4,7 +4,7 @@ import { errMsg } from './lib'
 import { Brand } from './App'
 import { downloadTop15 } from './topImage'
 
-type Rank = { id: string; name: string; votes: number; is_official: boolean; suggested_by: string | null; replaced_by: string | null }
+type Rank = { id: string; name: string; votes: number; is_official: boolean; suggested_by: string | null; replaced_by: string | null; replaced_by_text: string | null }
 type Part = { id: string; name: string; finalized_at: string | null; created_at: string }
 
 const csvCell = (v: string | number | boolean) => {
@@ -16,7 +16,7 @@ export default function Admin() {
   const [state, setState] = useState<'load' | 'login' | 'ok' | 'denied'>('load')
   const [err, setErr] = useState(''); const [email, setEmail] = useState(''); const [pw, setPw] = useState('')
   const [rank, setRank] = useState<Rank[]>([]); const [parts, setParts] = useState<Part[]>([]); const [stage, setStage] = useState('')
-  const [sub, setSub] = useState<Rank | null>(null); const [subVal, setSubVal] = useState('')
+  const [sub, setSub] = useState<Rank | null>(null); const [subVal, setSubVal] = useState(''); const [subTxt, setSubTxt] = useState('')
 
   const check = useCallback(async () => {
     const { data: { session } } = await sb.auth.getSession()
@@ -61,11 +61,16 @@ export default function Admin() {
     if (error) return setErr(errMsg(error))
     load()
   }
-  function openSub(r: Rank) { setSub(r); setSubVal(r.replaced_by ?? '') }
+  const subLabel = (r: Rank): string | undefined =>
+    r.replaced_by_text?.trim() || (r.replaced_by ? rank.find(x => x.id === r.replaced_by)?.name : undefined)
+  function openSub(r: Rank) { setSub(r); setSubVal(r.replaced_by ?? ''); setSubTxt(r.replaced_by_text ?? '') }
   async function saveSub() {
     if (!sub) return
     setErr('')
-    const { error } = await sb.from('categories').update({ replaced_by: subVal || null }).eq('id', sub.id)
+    const t = subTxt.trim().replace(/\s+/g, ' ')
+    if (t.length > 60) return setErr('O texto da substituição pode ter até 60 caracteres.')
+    const patch = t ? { replaced_by_text: t, replaced_by: null } : { replaced_by: subVal || null, replaced_by_text: null }
+    const { error } = await sb.from('categories').update(patch).eq('id', sub.id)
     if (error) return setErr(errMsg(error))
     setSub(null); load()
   }
@@ -75,7 +80,7 @@ export default function Admin() {
   }
   async function baixarImagem() {
     setErr('')
-    try { await downloadTop15(rank.slice(0, 15).map(r => ({ name: r.name, votes: r.votes, replacedBy: r.replaced_by ? rank.find(x => x.id === r.replaced_by)?.name : undefined }))) }
+    try { await downloadTop15(rank.slice(0, 15).map(r => ({ name: r.name, votes: r.votes, replacedBy: subLabel(r) }))) }
     catch (e) { setErr(errMsg(e)) }
   }
   function exportCsv() {
@@ -127,7 +132,7 @@ export default function Admin() {
         <thead><tr><th>#</th><th>Categoria</th><th>Votos</th><th>Sugerida por</th><th></th></tr></thead>
         <tbody>{rank.map((r, i) => (
           <tr key={r.id} className={i < 15 ? 'top15' : ''}>
-            <td>{i + 1}</td><td>{r.name}{r.is_official && ' 🏆'}{r.replaced_by && <small className="sub"> → substituída por {rank.find(x => x.id === r.replaced_by)?.name ?? '—'}</small>}</td><td>{r.votes}</td><td>{r.suggested_by ? by.get(r.suggested_by) ?? '—' : '—'}</td>
+            <td>{i + 1}</td><td>{r.name}{r.is_official && ' 🏆'}{subLabel(r) && <small className="sub"> → substituída por {subLabel(r)}</small>}</td><td>{r.votes}</td><td>{r.suggested_by ? by.get(r.suggested_by) ?? '—' : '—'}</td>
             <td><button className="link sublink" onClick={() => openSub(r)}>Substituir</button></td>
           </tr>))}</tbody>
       </table></div>
@@ -146,7 +151,10 @@ export default function Admin() {
           <div className="card">
             <h3>Substituir “{sub.name}”</h3>
             <p className="hint">Na imagem do Top 15 vai aparecer “substituída por …” embaixo desta categoria.</p>
-            <select value={subVal} onChange={e => setSubVal(e.target.value)}>
+            <label htmlFor="st" className="lbl">Escreva uma nova categoria</label>
+            <input id="st" value={subTxt} onChange={e => setSubTxt(e.target.value)} maxLength={60} placeholder="Ex.: Mais Estressado" />
+            <p className="hint">Ou escolha uma categoria que já existe (o texto acima tem prioridade):</p>
+            <select value={subVal} onChange={e => setSubVal(e.target.value)} disabled={!!subTxt.trim()}>
               <option value="">Sem substituição</option>
               {rank.filter(r => r.id !== sub.id).map(r => <option key={r.id} value={r.id}>{r.name} ({r.votes} votos)</option>)}
             </select>

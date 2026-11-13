@@ -66,3 +66,5 @@ tr.top15 td{background:#d9b24c14}tr.top15 td:first-child{color:var(--gold2);font
 select{width:100%;padding:.8rem .9rem;border-radius:10px;border:1px solid var(--line);background:#0e0c14;color:var(--text);font:inherit}
 .sub{color:var(--gold);font-size:.85rem}.sublink{color:var(--gold2)}
 .modal .row{justify-content:flex-end}
+.lbl{display:block;margin:.8rem 0 .4rem}
+.modal select:disabled{opacity:.45}
