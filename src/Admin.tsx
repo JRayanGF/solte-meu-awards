@@ -150,7 +150,7 @@ export default function Admin() {
         <div className="modal" role="dialog" aria-modal="true">
           <div className="card">
             <h3>Substituir “{sub.name}”</h3>
-            <p className="hint">Na imagem do Top 15 vai aparecer “substituída por …” embaixo desta categoria.</p>
+            <p className="hint">Na imagem do Top 15, a substituição aparece em destaque e, embaixo, “substituição da {sub.name}”.</p>
             <label htmlFor="st" className="lbl">Escreva uma nova categoria</label>
             <input id="st" value={subTxt} onChange={e => setSubTxt(e.target.value)} maxLength={60} placeholder="Ex.: Mais Estressado" />
             <p className="hint">Ou escolha uma categoria que já existe (o texto acima tem prioridade):</p>

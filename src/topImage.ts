@@ -47,10 +47,10 @@ export function drawTop15(ctx: CanvasRenderingContext2D, items: TopItem[]) {
       return sz
     }
     if (it.replacedBy) {
-      const label = it.name + ' \u{1F3C6}'
+      const label = it.replacedBy + ' \u{1F3C6}'
       const sz = fit(label, 28, 700, sans, 640)
       ctx.fillStyle = i < 3 ? GOLD2 : '#f2ecdc'; ctx.fillText(label, 176, cy - 3)
-      const sub = 'substituída por ' + it.replacedBy
+      const sub = 'substituição da ' + it.name
       fit(sub, 20, 500, sans, 640)
       ctx.fillStyle = GOLD; ctx.fillText(sub, 176, cy + 22)
       void sz
