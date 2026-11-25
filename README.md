@@ -29,3 +29,8 @@ React + TypeScript + Supabase, hospedado na Netlify. Etapa 1: escolha das 15 cat
 - O participante é reconhecido pela sessão do navegador. Se limpar os dados do navegador ou trocar de aparelho, o nome fica "ocupado": o admin libera em **Participantes → Remover**.
 - Segurança no banco: RLS em todas as tabelas, limite de 15, bloqueio após finalizar/encerrar, duplicidade (nome/categoria) e criação de categorias apenas via função `suggest_category`, tudo validado no PostgreSQL.
 - Etapa 2: já existem `app_settings.stage` (`winners_open/closed`), `categories.is_official` e a tabela `winner_votes` (bloqueada por RLS até ser implementada).
+
+## Fase 2 (votação dos vencedores)
+- Rode `supabase/phase2.sql` no SQL Editor (depois do `schema.sql`). Ele cria membros, logins, votos, bucket de fotos e funções.
+- Grave a chave de recuperação do admin (a tela "Esqueci minha senha" exige essa chave): `insert into public.admin_recovery (id, code_hash) values (1, extensions.crypt(upper('SUA-CHAVE'), extensions.gen_salt('bf')));`
+- No `/admin`: cadastre os membros (nome, foto, senha padrão 12345), abra a fase 2 e acompanhe os resultados (votos do grupo x popular).

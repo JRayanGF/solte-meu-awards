@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, FormEvent } from 'react'
 import { adminClient as sb } from './supabase'
 import { errMsg } from './lib'
 import { Brand } from './App'
+import AdminPhase2 from './AdminPhase2'
 import { downloadTop15 } from './topImage'
 
 type Rank = { id: string; name: string; votes: number; is_official: boolean; suggested_by: string | null; replaced_by: string | null; replaced_by_text: string | null }
@@ -15,6 +16,7 @@ const csvCell = (v: string | number | boolean) => {
 export default function Admin() {
   const [state, setState] = useState<'load' | 'login' | 'ok' | 'denied'>('load')
   const [err, setErr] = useState(''); const [email, setEmail] = useState(''); const [pw, setPw] = useState('')
+  const [forgot, setForgot] = useState(false); const [code, setCode] = useState(''); const [newPw, setNewPw] = useState(''); const [info, setInfo] = useState('')
   const [rank, setRank] = useState<Rank[]>([]); const [parts, setParts] = useState<Part[]>([]); const [stage, setStage] = useState('')
   const [sub, setSub] = useState<Rank | null>(null); const [subVal, setSubVal] = useState(''); const [subTxt, setSubTxt] = useState('')
 
@@ -46,6 +48,12 @@ export default function Admin() {
     const { error } = await sb.auth.signInWithPassword({ email, password: pw })
     if (error) return setErr('E-mail ou senha inválidos.')
     check()
+  }
+  async function recover(e: FormEvent) {
+    e.preventDefault(); setErr(''); setInfo('')
+    const { error } = await sb.rpc('admin_reset_password', { p_code: code, p_new: newPw })
+    if (error) return setErr(errMsg(error))
+    setInfo('Senha alterada! Entre com a nova senha.'); setForgot(false); setCode(''); setNewPw(''); setPw('')
   }
   const logout = async () => { await sb.auth.signOut(); setState('login') }
 
@@ -96,14 +104,27 @@ export default function Admin() {
   if (state === 'load') return <main className="stage hero"><Brand /><p className="lead pulse">Verificando acesso…</p></main>
   if (state !== 'ok') return (
     <main className="stage hero"><Brand />
-      <form onSubmit={login} className="card register">
-        <label htmlFor="e">Área do administrador</label>
-        <input id="e" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="E-mail" autoComplete="username" required />
-        <input type="password" value={pw} onChange={e => setPw(e.target.value)} placeholder="Senha" autoComplete="current-password" required />
-        {state === 'denied' && <p className="err">Esta conta não é administradora.</p>}
-        {err && <p className="err" role="alert">{err}</p>}
-        <button className="gold">Entrar</button>
-      </form>
+      {forgot ? (
+        <form onSubmit={recover} className="card register">
+          <label htmlFor="rc">Esqueci minha senha</label>
+          <input id="rc" value={code} onChange={e => setCode(e.target.value)} placeholder="Chave de recuperação" autoComplete="off" required />
+          <input type="password" value={newPw} onChange={e => setNewPw(e.target.value)} placeholder="Nova senha (mín. 6 caracteres)" autoComplete="new-password" minLength={6} required />
+          {err && <p className="err" role="alert">{err}</p>}
+          <button className="gold">Alterar senha</button>
+          <button type="button" className="link sublink" onClick={() => { setForgot(false); setErr('') }}>Voltar ao login</button>
+        </form>
+      ) : (
+        <form onSubmit={login} className="card register">
+          <label htmlFor="e">Área do administrador</label>
+          <input id="e" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="E-mail" autoComplete="username" required />
+          <input type="password" value={pw} onChange={e => setPw(e.target.value)} placeholder="Senha" autoComplete="current-password" required />
+          {state === 'denied' && <p className="err">Esta conta não é administradora.</p>}
+          {info && <p className="hint">{info}</p>}
+          {err && <p className="err" role="alert">{err}</p>}
+          <button className="gold">Entrar</button>
+          <button type="button" className="link sublink" onClick={() => { setForgot(true); setErr(''); setInfo('') }}>Esqueci minha senha</button>
+        </form>
+      )}
     </main>)
 
   const by = new Map(parts.map(p => [p.id, p.name]))
@@ -146,6 +167,8 @@ export default function Admin() {
             <td>{new Date(p.created_at).toLocaleString('pt-BR')}</td>
             <td><button className="link" onClick={() => remove(p)}>Remover</button></td></tr>))}</tbody>
       </table></div>
+      <AdminPhase2 stage={stage} onChange={load} />
+
       {sub && (
         <div className="modal" role="dialog" aria-modal="true">
           <div className="card">

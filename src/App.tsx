@@ -1,8 +1,9 @@
-import { useEffect, useState, FormEvent } from 'react'
+import { useEffect, useRef, useState, FormEvent } from 'react'
 import { supabase, configured } from './supabase'
 import { norm, errMsg } from './lib'
 import Voting, { Participant } from './Voting'
 import Admin from './Admin'
+import Phase2 from './Phase2'
 
 export function Brand({ small }: { small?: boolean }) {
   return (
@@ -66,27 +67,32 @@ function Setup() {
 
 function Participante() {
   const [p, setP] = useState<Participant | null>(null)
-  const [state, setState] = useState<'load' | 'new' | 'ok' | 'fail' | 'closed'>('load')
+  const [state, setState] = useState<'load' | 'new' | 'ok' | 'fail' | 'closed' | 'phase2'>('load')
   const [err, setErr] = useState('')
+  const ch = useRef<ReturnType<typeof supabase.channel> | null>(null)
   async function boot() {
-    setState('load'); setErr('')
+    setErr('')
     try {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) {
         const { error } = await supabase.auth.signInAnonymously()
         if (error) throw error
       }
+      if (!ch.current) ch.current = supabase.channel('stage').on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings' }, () => boot()).subscribe()
+      const { data: st, error: e1 } = await supabase.from('app_settings').select('stage').eq('id', 1).single()
+      if (e1) throw e1
+      if (st.stage === 'winners_open') return setState('phase2')
+      if (st.stage === 'winners_closed') return setState('closed')
       const { data, error } = await supabase.from('participants').select('id,name,finalized_at').maybeSingle()
       if (error) throw error
       if (data) { setP(data as Participant); setState('ok'); return }
-      const { data: st, error: e2 } = await supabase.from('app_settings').select('stage').eq('id', 1).single()
-      if (e2) throw e2
       setState(st.stage === 'categories_open' ? 'new' : 'closed')
     } catch (e) { setErr(errMsg(e)); setState('fail') }
   }
-  useEffect(() => { boot() }, [])
+  useEffect(() => { boot(); return () => { if (ch.current) supabase.removeChannel(ch.current) } }, [])
   if (state === 'load') return <main className="stage hero"><Brand /><p className="lead pulse">Abrindo o tapete vermelho…</p></main>
-  if (state === 'fail') return <main className="stage hero"><Brand /><div className="card"><p className="err" role="alert">{err}</p><button className="gold" onClick={boot}>Tentar de novo</button></div></main>
+  if (state === 'fail') return <main className="stage hero"><Brand /><div className="card"><p className="err" role="alert">{err}</p><button className="gold" onClick={() => { setState('load'); boot() }}>Tentar de novo</button></div></main>
+  if (state === 'phase2') return <Phase2 />
   if (state === 'closed') return <Closed />
   if (state === 'new') return <Register onDone={x => { setP(x); setState('ok') }} />
   return <Voting p={p!} onFinal={f => setP({ ...p!, finalized_at: f })} />
