@@ -90,8 +90,14 @@ export default function AdminPhase2({ stage, onChange }: { stage: string; onChan
     if (m.photo_path) await sb.storage.from('member-photos').remove([m.photo_path])
     load()
   }
-  async function setStageTo(s: 'winners_open' | 'winners_closed') {
-    if (!window.confirm(s === 'winners_open' ? 'Abrir a votação da fase 2 para todos?' : 'Encerrar a votação da fase 2?')) return
+  async function finishTest() {
+    if (!window.confirm('Finalizar o teste? TODOS os votos de teste serão apagados e a votação volta ao estado inicial.')) return
+    const { error } = await sb.rpc('finish_test')
+    if (error) setErr(errMsg(error)); else { setErr(''); load(); onChange() }
+  }
+  async function setStageTo(s: 'winners_test' | 'winners_open' | 'winners_closed') {
+    const q = { winners_test: 'Abrir a votação só para teste? Os participantes verão “Em breve” e só você vota, pela tela de teste.', winners_open: 'Abrir a votação da fase 2 para todos?', winners_closed: 'Encerrar a votação da fase 2?' }[s]
+    if (!window.confirm(q)) return
     const { error } = await sb.rpc('set_stage', { p_stage: s })
     if (error) setErr(errMsg(error)); else { setErr(''); onChange() }
   }
@@ -110,16 +116,23 @@ export default function AdminPhase2({ stage, onChange }: { stage: string; onChan
     const names = top ? rs.filter(r => r.t === top).map(r => members.find(m => m.id === r.id)?.name ?? '—').join(' / ') : 'Sem votos'
     return { key: c.id, title: c.title, names, votes: top }
   })
-  const label: Record<string, string> = { categories_open: 'Fase 1 aberta', categories_closed: 'Fase 1 encerrada', winners_open: 'Fase 2 aberta', winners_closed: 'Fase 2 encerrada' }
+  const label: Record<string, string> = { categories_open: 'Fase 1 aberta', categories_closed: 'Fase 1 encerrada', winners_test: 'Fase 2 em TESTE', winners_open: 'Fase 2 aberta', winners_closed: 'Fase 2 encerrada' }
   return (
     <section>
       <h2 className="title">Fase 2 — Quem vai ganhar</h2>
       <div className="row actions">
         <span className="pill">{label[stage] ?? stage}</span>
-        <button className="gold" onClick={() => setStageTo('winners_open')} disabled={stage === 'categories_open' || stage === 'winners_open'}>{stage === 'winners_closed' ? 'Reabrir fase 2' : 'Abrir votação da fase 2'}</button>
-        <button className="danger" onClick={() => setStageTo('winners_closed')} disabled={stage !== 'winners_open'}>Encerrar fase 2</button>
+        {stage === 'winners_test' ? (<>
+          <a className="ghost btnlink" href="/teste" target="_blank" rel="noreferrer">Abrir tela de teste</a>
+          <button className="gold" onClick={finishTest}>Finalizar teste (apaga tudo)</button>
+        </>) : (<>
+          <button className="ghost" onClick={() => setStageTo('winners_test')} disabled={stage === 'categories_open' || stage === 'winners_open'}>Abrir pra teste</button>
+          <button className="gold" onClick={() => setStageTo('winners_open')} disabled={stage === 'categories_open' || stage === 'winners_open'}>{stage === 'winners_closed' ? 'Reabrir fase 2' : 'Abrir votação da fase 2'}</button>
+          <button className="danger" onClick={() => setStageTo('winners_closed')} disabled={stage !== 'winners_open'}>Encerrar fase 2</button>
+        </>)}
       </div>
       {stage === 'categories_open' && <p className="hint">Encerre a votação da fase 1 para liberar a fase 2.</p>}
+      {stage === 'winners_test' && <p className="hint">Teste aberto: vote em /teste (como membro ou popular), confira os gráficos abaixo e depois clique em “Finalizar teste”.</p>}
       {err && <p className="err" role="alert">{err}</p>}
 
       <h3 className="sec">Membros do grupo ({members.length})</h3>

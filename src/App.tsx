@@ -4,6 +4,7 @@ import { norm, errMsg } from './lib'
 import Voting, { Participant } from './Voting'
 import Admin from './Admin'
 import Phase2 from './Phase2'
+import Teste from './Teste'
 
 export function Brand({ small }: { small?: boolean }) {
   return (
@@ -16,6 +17,14 @@ export function Brand({ small }: { small?: boolean }) {
       </svg>
       <h1><span>SOLTE MEU</span>AWARDS</h1>
     </div>
+  )
+}
+
+export function Soon() {
+  return (
+    <main className="stage hero"><Brand />
+      <div className="card done closed"><h2>Em breve!</h2><p className="lead">A votação dos vencedores ainda não começou. Volte daqui a pouco.</p></div>
+    </main>
   )
 }
 
@@ -67,7 +76,7 @@ function Setup() {
 
 function Participante() {
   const [p, setP] = useState<Participant | null>(null)
-  const [state, setState] = useState<'load' | 'new' | 'ok' | 'fail' | 'closed' | 'phase2'>('load')
+  const [state, setState] = useState<'load' | 'new' | 'ok' | 'fail' | 'closed' | 'phase2' | 'soon'>('load')
   const [err, setErr] = useState('')
   const ch = useRef<ReturnType<typeof supabase.channel> | null>(null)
   async function boot() {
@@ -82,6 +91,7 @@ function Participante() {
       const { data: st, error: e1 } = await supabase.from('app_settings').select('stage').eq('id', 1).single()
       if (e1) throw e1
       if (st.stage === 'winners_open') return setState('phase2')
+      if (st.stage === 'winners_test') return setState('soon')
       if (st.stage === 'winners_closed') return setState('closed')
       const { data, error } = await supabase.from('participants').select('id,name,finalized_at').maybeSingle()
       if (error) throw error
@@ -93,6 +103,7 @@ function Participante() {
   if (state === 'load') return <main className="stage hero"><Brand /><p className="lead pulse">Abrindo o tapete vermelho…</p></main>
   if (state === 'fail') return <main className="stage hero"><Brand /><div className="card"><p className="err" role="alert">{err}</p><button className="gold" onClick={() => { setState('load'); boot() }}>Tentar de novo</button></div></main>
   if (state === 'phase2') return <Phase2 />
+  if (state === 'soon') return <Soon />
   if (state === 'closed') return <Closed />
   if (state === 'new') return <Register onDone={x => { setP(x); setState('ok') }} />
   return <Voting p={p!} onFinal={f => setP({ ...p!, finalized_at: f })} />
@@ -100,5 +111,7 @@ function Participante() {
 
 export default function App() {
   if (!configured) return <Setup />
-  return location.pathname.startsWith('/admin') ? <Admin /> : <Participante />
+  if (location.pathname.startsWith('/admin')) return <Admin />
+  if (location.pathname.startsWith('/teste')) return <Teste />
+  return <Participante />
 }
