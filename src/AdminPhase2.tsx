@@ -4,7 +4,21 @@ import { errMsg } from './lib'
 import { Avatar, Member, squareJpeg } from './photo'
 
 type Cat = { id: string; title: string; pos: number | null }
+type Row = { key: string; label: string; m?: Member; a: number; b: number }
 type Res = { category_id: string; nominee_id: string; member_votes: number; popular_votes: number }
+
+function Bars({ rows, max }: { rows: Row[]; max?: number }) {
+  const mx = max ?? Math.max(1, ...rows.map(r => r.a + r.b))
+  return (
+    <div className="hbars">
+      {rows.map((r, i) => (
+        <div key={r.key} className={'hb' + (i === 0 && r.a + r.b > 0 ? ' top' : '')}>
+          <div className="bl">{r.m && <Avatar m={r.m} size={26} />}<span title={r.label}>{r.label}</span></div>
+          <div className="bt"><i className="seg g" style={{ width: `${(r.a / mx) * 100}%` }} /><i className="seg p" style={{ width: `${(r.b / mx) * 100}%` }} /></div>
+          <b className="bn">{r.a + r.b}</b>
+        </div>))}
+    </div>)
+}
 
 export default function AdminPhase2({ stage, onChange }: { stage: string; onChange: () => void }) {
   const [members, setMembers] = useState<Member[]>([]); const [cats, setCats] = useState<Cat[]>([]); const [res, setRes] = useState<Res[]>([])
@@ -60,7 +74,20 @@ export default function AdminPhase2({ stage, onChange }: { stage: string; onChan
     if (error) setErr(errMsg(error)); else { setErr(''); onChange() }
   }
 
-  const byId = new Map(members.map(m => [m.id, m]))
+  const tot = new Map<string, { a: number; b: number }>()
+  res.forEach(r => { const t = tot.get(r.nominee_id) ?? { a: 0, b: 0 }; t.a += r.member_votes; t.b += r.popular_votes; tot.set(r.nominee_id, t) })
+  const overall: Row[] = members.map(m => ({ key: m.id, label: m.name, m, a: tot.get(m.id)?.a ?? 0, b: tot.get(m.id)?.b ?? 0 }))
+    .sort((x, y) => (y.a + y.b) - (x.a + x.b))
+  const perCat: Row[] = cats.map(c => {
+    const rs = res.filter(r => r.category_id === c.id)
+    return { key: c.id, label: c.title, a: rs.reduce((n, r) => n + r.member_votes, 0), b: rs.reduce((n, r) => n + r.popular_votes, 0) }
+  })
+  const leaders = cats.map(c => {
+    const rs = res.filter(r => r.category_id === c.id).map(r => ({ id: r.nominee_id, t: r.member_votes + r.popular_votes }))
+    const top = Math.max(0, ...rs.map(r => r.t))
+    const names = top ? rs.filter(r => r.t === top).map(r => members.find(m => m.id === r.id)?.name ?? '—').join(' / ') : 'Sem votos'
+    return { key: c.id, title: c.title, names, votes: top }
+  })
   const label: Record<string, string> = { categories_open: 'Fase 1 aberta', categories_closed: 'Fase 1 encerrada', winners_open: 'Fase 2 aberta', winners_closed: 'Fase 2 encerrada' }
   return (
     <section>
@@ -90,16 +117,22 @@ export default function AdminPhase2({ stage, onChange }: { stage: string; onChan
 
       <h3 className="sec">Resultados</h3>
       <p className="hint">Membros que votaram: {sum.member_voters} · Votantes populares: {sum.popular_voters}</p>
+      <div className="legend"><span><i className="k g" />Grupo</span><span><i className="k p" />Popular</span></div>
+
+      <div className="card resc"><b>Placar geral (todos os votos recebidos)</b><Bars rows={overall} /></div>
+      <div className="card resc"><b>Quem está na frente</b>
+        {leaders.map(l => <div key={l.key} className="rrow"><span className="grow">{l.title}</span><span>{l.names}</span><b>{l.votes ? l.votes : '—'}</b></div>)}
+      </div>
+      <div className="card resc"><b>Votos por indicação</b><Bars rows={perCat} /></div>
+
       {cats.map(c => {
-        const rows = res.filter(r => r.category_id === c.id).map(r => ({ ...r, total: r.member_votes + r.popular_votes })).sort((a, b) => b.total - a.total)
+        const rows: Row[] = members.map(m => {
+          const r = res.find(x => x.category_id === c.id && x.nominee_id === m.id)
+          return { key: m.id, label: m.name, m, a: r?.member_votes ?? 0, b: r?.popular_votes ?? 0 }
+        }).filter(r => r.a + r.b > 0).sort((x, y) => (y.a + y.b) - (x.a + x.b))
         return (
           <div key={c.id} className="card resc"><b>{c.title}</b>
-            {rows.length === 0 ? <p className="hint">Sem votos ainda.</p> : rows.map((r, i) => (
-              <div key={r.nominee_id} className={'rrow' + (i === 0 ? ' lead1' : '')}>
-                {byId.get(r.nominee_id) && <Avatar m={byId.get(r.nominee_id)!} size={32} />}
-                <span className="grow">{byId.get(r.nominee_id)?.name ?? '—'}</span>
-                <small>Grupo {r.member_votes} · Popular {r.popular_votes}</small><b>{r.total}</b>
-              </div>))}
+            {rows.length === 0 ? <p className="hint">Sem votos ainda.</p> : <Bars rows={rows} />}
           </div>)
       })}
     </section>)

@@ -25,3 +25,15 @@ export async function squareJpeg(file: File, size = 480): Promise<Blob> {
     return await new Promise<Blob>((res, rej) => c.toBlob(b => (b ? res(b) : rej(new Error('Falha ao processar a foto.'))), 'image/jpeg', 0.85))
   } finally { URL.revokeObjectURL(url) }
 }
+
+/** Foto dentro de uma moldura dourada (usada na votação). */
+export function Framed({ m }: { m: Member }) {
+  const u = photoUrl(m.photo_path)
+  return (
+    <div className="frame">
+      <div className="mat">
+        {u ? <img src={u} alt={m.name} loading="lazy" /> : <span className="fph">{m.name.slice(0, 1).toUpperCase()}</span>}
+      </div>
+    </div>
+  )
+}
