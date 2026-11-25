@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { supabase } from './supabase'
 import { errMsg } from './lib'
 import { Brand } from './App'
-import { Avatar, Framed, Member } from './photo'
+import { Avatar, Framed, Member, NameTag } from './photo'
 
 type Cat = { id: string; title: string; pos: number | null }
 const FLAG = 'sma-popular'
@@ -28,7 +28,7 @@ function Login({ members, onMember, onPopular }: { members: Member[]; onMember: 
       <div className="members">
         {members.map(m => (
           <button key={m.id} className={'mem' + (who?.id === m.id ? ' on' : '')} onClick={() => { setWho(m); setPw(''); setErr('') }}>
-            <Framed m={m} /><span className="plate">{m.name}</span>
+            <Framed m={m} /><NameTag m={m} />
           </button>))}
       </div>
       {who && (
@@ -52,7 +52,7 @@ export default function Phase2() {
 
   const load = useCallback(async () => {
     const [m, c, v, s] = await Promise.all([
-      supabase.from('members').select('id,name,photo_path').order('created_at'),
+      supabase.from('members').select('id,name,photo_path,nickname').order('created_at'),
       supabase.rpc('phase2_categories'),
       supabase.from('winner_votes').select('category_id,nominee_id'),
       supabase.from('member_sessions').select('member_id').maybeSingle()])
@@ -99,14 +99,14 @@ export default function Phase2() {
       <h2 className="title">{cat.title}</h2>
       <p className="lead">Quem merece ganhar? Toque na foto.</p>
       <div className="members">
-        {members.map(m => <button key={m.id} className="mem" onClick={() => setPick(m)}><Framed m={m} /><span className="plate">{m.name}</span></button>)}
+        {members.map(m => <button key={m.id} className="mem" onClick={() => setPick(m)}><Framed m={m} /><NameTag m={m} /></button>)}
       </div>
       {err && <p className="err" role="alert">{err}</p>}
       {pick && (
         <div className="modal" role="dialog" aria-modal="true">
           <div className="card" style={{ textAlign: 'center' }}>
             <div className="bigframe"><Framed m={pick} /></div>
-            <h3>Votar em {pick.name}?</h3>
+            <h3>Votar em {pick.name}?</h3>{pick.nickname && <p className="nick2">{pick.nickname}</p>}
             <p className="hint">Indicação: {cat.title}. Depois de confirmar, não dá para mudar.</p>
             <div className="row"><button className="ghost" onClick={() => setPick(null)}>Voltar</button><button className="gold" onClick={confirmVote} disabled={busy}>{busy ? 'Salvando…' : 'Confirmar'}</button></div>
           </div>

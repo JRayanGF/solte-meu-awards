@@ -25,10 +25,11 @@ export default function AdminPhase2({ stage, onChange }: { stage: string; onChan
   const [sum, setSum] = useState({ member_voters: 0, popular_voters: 0 }); const [err, setErr] = useState('')
   const [name, setName] = useState(''); const [file, setFile] = useState<File | null>(null); const [pw, setPw] = useState('12345')
   const [busy, setBusy] = useState(false); const [fk, setFk] = useState(0)
+  const [tab, setTab] = useState<'m' | 'a'>('m'); const [nicks, setNicks] = useState<Record<string, string>>({})
 
   const load = useCallback(async () => {
     const [m, c, r, s] = await Promise.all([
-      sb.from('members').select('id,name,photo_path').order('created_at'), sb.rpc('phase2_categories'),
+      sb.from('members').select('id,name,photo_path,nickname').order('created_at'), sb.rpc('phase2_categories'),
       sb.rpc('winner_results'), sb.rpc('winner_summary')])
     const e = m.error || c.error || r.error || s.error
     if (e) return setErr(errMsg(e))
@@ -54,6 +55,27 @@ export default function AdminPhase2({ stage, onChange }: { stage: string; onChan
       const u = await sb.from('members').update({ photo_path: path }).eq('id', data.id); if (u.error) throw u.error
       const p = await sb.rpc('admin_set_member_password', { p_member: data.id, p_password: pw }); if (p.error) throw p.error
       setName(''); setFile(null); setFk(k => k + 1); setPw('12345'); load()
+    } catch (e) { setErr(errMsg(e)) } finally { setBusy(false) }
+  }
+  async function changePhoto(m: Member, f?: File) {
+    if (!f) return
+    setErr(''); setBusy(true)
+    try {
+      const blob = await squareJpeg(f); const path = `${m.id}-${Date.now()}.jpg`
+      const up = await sb.storage.from('member-photos').upload(path, blob, { contentType: 'image/jpeg' }); if (up.error) throw up.error
+      const u = await sb.from('members').update({ photo_path: path }).eq('id', m.id); if (u.error) throw u.error
+      if (m.photo_path) await sb.storage.from('member-photos').remove([m.photo_path])
+      load()
+    } catch (e) { setErr(errMsg(e)) } finally { setBusy(false) }
+  }
+  async function saveNicks() {
+    setErr(''); setBusy(true)
+    try {
+      for (const [id, v] of Object.entries(nicks)) {
+        const t = v.trim().replace(/\s+/g, ' ')
+        const { error } = await sb.from('members').update({ nickname: t || null }).eq('id', id); if (error) throw error
+      }
+      setNicks({}); load()
     } catch (e) { setErr(errMsg(e)) } finally { setBusy(false) }
   }
   async function changePw(m: Member) {
@@ -101,19 +123,36 @@ export default function AdminPhase2({ stage, onChange }: { stage: string; onChan
       {err && <p className="err" role="alert">{err}</p>}
 
       <h3 className="sec">Membros do grupo ({members.length})</h3>
-      <p className="hint">Cada membro tem login (a senha padrão é 12345) e aparece com a foto nas indicações.</p>
-      <form onSubmit={add} className="card addm">
-        <input value={name} onChange={e => setName(e.target.value)} maxLength={40} placeholder="Nome do membro" />
-        <input key={fk} type="file" accept="image/*" onChange={e => setFile(e.target.files?.[0] ?? null)} />
-        <input value={pw} onChange={e => setPw(e.target.value)} placeholder="Senha" />
-        <button className="gold" disabled={busy}>{busy ? 'Salvando…' : 'Adicionar membro'}</button>
-      </form>
-      <div className="mlist">
-        {members.map(m => (
-          <div key={m.id} className="card mrow"><Avatar m={m} size={56} /><b className="grow">{m.name}</b>
-            <button className="link sublink" onClick={() => changePw(m)}>Senha</button>
-            <button className="link" onClick={() => remove(m)}>Remover</button></div>))}
+      <div className="tabs">
+        <button className={tab === 'm' ? 'on' : ''} onClick={() => setTab('m')}>Membros</button>
+        <button className={tab === 'a' ? 'on' : ''} onClick={() => setTab('a')}>Apelidos</button>
       </div>
+      {tab === 'm' ? (<>
+        <p className="hint">Cada membro tem login (senha padrão 12345). Use o botão “Foto” para colocar a foto de cada um.</p>
+        <form onSubmit={add} className="card addm">
+          <input value={name} onChange={e => setName(e.target.value)} maxLength={40} placeholder="Novo membro: nome" />
+          <input key={fk} type="file" accept="image/*" onChange={e => setFile(e.target.files?.[0] ?? null)} />
+          <input value={pw} onChange={e => setPw(e.target.value)} placeholder="Senha" />
+          <button className="gold" disabled={busy}>{busy ? 'Salvando…' : 'Adicionar membro'}</button>
+        </form>
+        <div className="mlist">
+          {members.map(m => (
+            <div key={m.id} className="card mrow"><Avatar m={m} size={56} />
+              <div className="grow"><b>{m.name}</b>{m.nickname && <small className="sub"> “{m.nickname}”</small>}{!m.photo_path && <small className="hint"> · sem foto</small>}</div>
+              <label className="link sublink filebtn">Foto<input type="file" accept="image/*" hidden disabled={busy} onChange={e => { changePhoto(m, e.target.files?.[0]); e.target.value = '' }} /></label>
+              <button className="link sublink" onClick={() => changePw(m)}>Senha</button>
+              <button className="link" onClick={() => remove(m)}>Remover</button></div>))}
+        </div>
+      </>) : (<>
+        <p className="hint">O apelido aparece embaixo do nome na votação. Deixe vazio para não mostrar.</p>
+        <div className="mlist">
+          {members.map(m => (
+            <div key={m.id} className="card mrow"><Avatar m={m} size={44} /><b className="nm">{m.name}</b>
+              <input className="grow" value={nicks[m.id] ?? m.nickname ?? ''} maxLength={30} placeholder="Apelido"
+                onChange={e => setNicks({ ...nicks, [m.id]: e.target.value })} /></div>))}
+        </div>
+        <button className="gold" onClick={saveNicks} disabled={busy || !Object.keys(nicks).length}>{busy ? 'Salvando…' : 'Salvar apelidos'}</button>
+      </>)}
 
       <h3 className="sec">Resultados</h3>
       <p className="hint">Membros que votaram: {sum.member_voters} · Votantes populares: {sum.popular_voters}</p>

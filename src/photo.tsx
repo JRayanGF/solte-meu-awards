@@ -1,6 +1,6 @@
 import { supabase } from './supabase'
 
-export type Member = { id: string; name: string; photo_path: string | null }
+export type Member = { id: string; name: string; photo_path: string | null; nickname: string | null }
 
 export const photoUrl = (path: string | null) =>
   path ? supabase.storage.from('member-photos').getPublicUrl(path).data.publicUrl : null
@@ -36,4 +36,9 @@ export function Framed({ m }: { m: Member }) {
       </div>
     </div>
   )
+}
+
+/** Nome + apelido embaixo (usado na votação). */
+export function NameTag({ m }: { m: Member }) {
+  return (<><span className="plate">{m.name}</span>{m.nickname && <small className="nick">{m.nickname}</small>}</>)
 }

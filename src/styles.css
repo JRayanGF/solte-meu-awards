@@ -110,3 +110,10 @@ select{width:100%;padding:.8rem .9rem;border-radius:10px;border:1px solid var(--
 .seg{display:block;height:100%;transition:width .5s}
 .hb.top .bl span,.hb.top .bn{color:var(--gold2);font-weight:700}.bn{text-align:right}
 .rrow span:nth-child(2){color:var(--gold2)}
+
+.nick{color:var(--mute);font:italic 500 .8rem var(--sans);margin-top:-.25rem}
+.nick2{color:var(--gold);font-style:italic;margin:-.4rem 0 .4rem}
+.tabs{display:flex;gap:.4rem;margin:.6rem 0}
+.tabs button{background:transparent;border:1px solid var(--line);color:var(--mute);padding:.5rem 1rem}
+.tabs button.on{border-color:var(--gold);color:var(--gold2);background:#1d1810}
+.filebtn{cursor:pointer;font-weight:700}.nm{min-width:7.5rem}
