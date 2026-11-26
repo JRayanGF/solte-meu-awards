@@ -99,8 +99,11 @@ export default function Phase2({ client = supabase, test = false }: { client?: D
   if (cat && !all) return (
     <main className="stage">{head}
       <button className="link sublink" onClick={() => setCur(null)}>← Indicações</button>
-      <h2 className="title">{cat.title}</h2>
-      <p className="lead">Quem merece ganhar? Toque na foto.</p>
+      <div className="ind">
+        <small>Indicação {cats.findIndex(c => c.id === cat.id) + 1} de {cats.length}</small>
+        <h2>{cat.title}</h2>
+        <p>Quem merece ganhar? Toque na foto.</p>
+      </div>
       <div className="members">
         {members.map(m => <button key={m.id} className="mem" onClick={() => setPick(m)}><Framed m={m} /><NameTag m={m} /></button>)}
       </div>
@@ -110,7 +113,8 @@ export default function Phase2({ client = supabase, test = false }: { client?: D
           <div className="card" style={{ textAlign: 'center' }}>
             <div className="bigframe"><Framed m={pick} /></div>
             <h3>Votar em {pick.name}?</h3>{pick.nickname && <p className="nick2">{pick.nickname}</p>}
-            <p className="hint">Indicação: {cat.title}. Depois de confirmar, não dá para mudar.</p>
+            <p className="indm">{cat.title}</p>
+            <p className="hint">Depois de confirmar, não dá para mudar.</p>
             <div className="row"><button className="ghost" onClick={() => setPick(null)}>Voltar</button><button className="gold" onClick={confirmVote} disabled={busy}>{busy ? 'Salvando…' : 'Confirmar'}</button></div>
           </div>
         </div>)}

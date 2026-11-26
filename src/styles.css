@@ -120,3 +120,13 @@ select{width:100%;padding:.8rem .9rem;border-radius:10px;border:1px solid var(--
 
 .btnlink{display:inline-block;text-decoration:none;font:700 1rem var(--sans);border:1px solid var(--gold);border-radius:10px;padding:.8rem 1.1rem;color:var(--gold2)}
 .testbar{position:sticky;top:0;z-index:5;background:#ff8a7a;color:#2a0d08;text-align:center;font-weight:800;padding:.5rem;font-size:.9rem}
+
+/* Indicação em destaque */
+.ind{position:sticky;top:0;z-index:4;text-align:center;margin:.8rem 0 0;padding:1rem .8rem .9rem;border:1px solid var(--gold);border-radius:14px;
+background:radial-gradient(120% 140% at 50% 0%,#3a2d12 0%,#12101a 70%);box-shadow:0 10px 24px #000a,0 0 24px #d9b24c33}
+.ind small{display:block;color:var(--gold2);font:600 .75rem var(--serif);letter-spacing:.25em;text-transform:uppercase}
+.ind h2{margin:.3rem 0 .2rem;font:800 clamp(1.9rem,9vw,2.8rem)/1.1 var(--serif);letter-spacing:.03em;
+background:linear-gradient(100deg,#b8892b 15%,var(--gold2) 50%,#b8892b 85%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.ind p{margin:0;color:var(--mute);font-size:.9rem}
+.indm{margin:.2rem 0 .1rem;font:800 1.5rem/1.15 var(--serif);color:var(--gold2)}
+.plate{white-space:normal;overflow:visible;text-overflow:clip;text-align:center;line-height:1.25}
