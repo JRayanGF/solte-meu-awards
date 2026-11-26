@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, FormEvent } from 'react'
 import { adminClient as sb } from './supabase'
 import { errMsg } from './lib'
 import { Avatar, Member, squareJpeg } from './photo'
+import Reveal from './Reveal'
 
 type Cat = { id: string; title: string; pos: number | null; honorary: boolean }
 type Row = { key: string; label: string; m?: Member; a: number; b: number }
@@ -25,6 +26,7 @@ export default function AdminPhase2({ stage, onChange }: { stage: string; onChan
   const [sum, setSum] = useState({ member_voters: 0, popular_voters: 0 }); const [err, setErr] = useState('')
   const [name, setName] = useState(''); const [file, setFile] = useState<File | null>(null); const [pw, setPw] = useState('12345')
   const [busy, setBusy] = useState(false); const [fk, setFk] = useState(0)
+  const [show, setShow] = useState(false)
   const [tab, setTab] = useState<'m' | 'a' | 'h'>('m');
   const [hd, setHd] = useState<Record<string, { name?: string; nick?: string; file?: File }>>({})
   const [empties, setEmpties] = useState<string[]>(['n1', 'n2', 'n3', 'n4', 'n5']); const [nid, setNid] = useState(6)
@@ -157,6 +159,7 @@ export default function AdminPhase2({ stage, onChange }: { stage: string; onChan
       <h2 className="title">Fase 2 — Quem vai ganhar</h2>
       <div className="row actions">
         <span className="pill">{label[stage] ?? stage}</span>
+        <button className="gold" onClick={() => setShow(true)} disabled={!cats.length}>Resultados</button>
         {stage === 'winners_test' ? (<>
           <a className="ghost btnlink" href="/teste" target="_blank" rel="noreferrer">Abrir tela de teste</a>
           <button className="gold" onClick={finishTest}>Finalizar teste (apaga tudo)</button>
@@ -246,5 +249,6 @@ export default function AdminPhase2({ stage, onChange }: { stage: string; onChan
             {rows.length === 0 ? <p className="hint">Sem votos ainda.</p> : <Bars rows={rows} />}
           </div>)
       })}
+      {show && <Reveal cats={cats} members={members} res={res} onClose={() => setShow(false)} />}
     </section>)
 }
