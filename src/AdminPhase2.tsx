@@ -87,7 +87,6 @@ export default function AdminPhase2({ stage, onChange }: { stage: string; onChan
     const nm = (d.name ?? ex?.name ?? '').trim().replace(/\s+/g, ' ')
     const nick = (d.nick ?? ex?.nickname ?? '').trim().replace(/\s+/g, ' ') || null
     if (nm.length < 2) return setErr('Digite o nome do indicado.')
-    if (!ex && !d.file) return setErr('Escolha a foto do indicado.')
     setErr(''); setBusy(true)
     try {
       let id = ex?.id
@@ -208,7 +207,7 @@ export default function AdminPhase2({ stage, onChange }: { stage: string; onChan
           <option value="">Nenhuma</option>
           {cats.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
         </select>
-        <p className="hint">Indicados ({honor.length}). Preencha nome e foto, clique em Salvar e use “+” para abrir mais um espaço.</p>
+        <p className="hint">Indicados ({honor.length}). Preencha o nome (a foto é opcional), clique em Salvar e use “+” para abrir mais um espaço.</p>
         <div className="mlist">
           {honor.map(m => { const d = hd[m.id] ?? {}; const dirty = d.name !== undefined || d.nick !== undefined || !!d.file; return (
             <div key={m.id} className="card hslot"><Avatar m={m} size={48} />
@@ -222,7 +221,7 @@ export default function AdminPhase2({ stage, onChange }: { stage: string; onChan
               <input value={d.name ?? ''} maxLength={40} onChange={e => patchHd(k, { name: e.target.value })} placeholder="Nome do indicado" />
               <input value={d.nick ?? ''} maxLength={30} onChange={e => patchHd(k, { nick: e.target.value })} placeholder="Apelido (opcional)" />
               <label className="link sublink filebtn">{d.file ? 'Foto ✓' : 'Foto'}<input type="file" accept="image/*" hidden onChange={e => { patchHd(k, { file: e.target.files?.[0] }); e.target.value = '' }} /></label>
-              <button className="gold sm" disabled={busy || !d.name?.trim() || !d.file} onClick={() => saveHonor(k)}>Salvar</button></div>) })}
+              <button className="gold sm" disabled={busy || !d.name?.trim()} onClick={() => saveHonor(k)}>Salvar</button></div>) })}
         </div>
         <button className="ghost" onClick={() => { setEmpties(l => [...l, 'n' + nid]); setNid(n => n + 1) }}>+ Adicionar mais um espaço</button>
       </>)}
