@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Framed, Member } from './photo'
+import { initAudio, isMuted, setMuted, playBoom, startRoll, stopRoll, playHit, playCurtain, playFanfare, playApplause, stopAll } from './sound'
 
 type Cat = { id: string; title: string; pos: number | null }
 type Res = { category_id: string; nominee_id: string; member_votes: number; popular_votes: number }
 type W = { m: Member; a: number; b: number; total: number }
 type P = { x: number; y: number; vx: number; vy: number; w: number; h: number; r: number; vr: number; col: string }
-type Ph = 'intro' | 'suspense' | 'opening' | 'revealed'
+type Ph = 'intro' | 'suspense' | 'pause' | 'opening' | 'revealed'
 
 /** Confete saindo dos dois lados da tela a cada disparo (shot). */
 function Confetti({ shot }: { shot: number }) {
@@ -42,7 +43,7 @@ function Confetti({ shot }: { shot: number }) {
 
 export default function Reveal({ cats, members, res, onClose }: { cats: Cat[]; members: Member[]; res: Res[]; onClose: () => void }) {
   const [asc, setAsc] = useState(false); const [started, setStarted] = useState(false)
-  const [i, setI] = useState(0); const [ph, setPh] = useState<Ph>('intro'); const [fin, setFin] = useState(false); const [shot, setShot] = useState(0)
+  const [i, setI] = useState(0); const [ph, setPh] = useState<Ph>('intro'); const [fin, setFin] = useState(false); const [shot, setShot] = useState(0); const [mute, setMute] = useState(isMuted())
   const timers = useRef<number[]>([])
   const clear = () => { timers.current.forEach(clearTimeout); timers.current = [] }
   const after = (ms: number, fn: () => void) => { timers.current.push(window.setTimeout(fn, ms)) }
@@ -60,23 +61,30 @@ export default function Reveal({ cats, members, res, onClose }: { cats: Cat[]; m
     return list.sort((x, y) => (asc ? x.pos - y.pos : y.pos - x.pos))
   }, [cats, members, res, asc])
 
-  const open = () => { clear(); setPh('opening'); after(500, () => setShot(s => s + 1)); after(1700, () => setPh('revealed')) }
+  const doOpen = () => {
+    clear(); setPh('opening'); playCurtain()
+    after(350, () => { playFanfare(); playApplause(3.8); setShot(n => n + 1) })
+    after(2100, () => setPh('revealed'))
+  }
+  const go = () => { clear(); stopRoll(); playHit(); setPh('pause'); after(500, doOpen) }
   const next = () => {
     if (i < items.length - 1) setI(i + 1)
-    else { clear(); setFin(true); setShot(s => s + 1) }
+    else { clear(); stopRoll(); setFin(true); setShot(n => n + 1); playFanfare(); playApplause(5) }
   }
   useEffect(() => {
     if (!started || fin) return
-    clear(); setPh('intro')
-    after(2600, () => setPh('suspense')); after(6200, open)
-    return clear
+    clear(); stopRoll(); setPh('intro'); playBoom()
+    after(2600, () => { setPh('suspense'); startRoll(4.8) })
+    after(7400, go)
+    return () => { clear(); stopRoll() }
   }, [started, i, fin])
+  useEffect(() => () => { clear(); stopAll() }, [])
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
       if (e.key === 'Escape') return onClose()
       if (!started || fin || !['Enter', 'ArrowRight', ' '].includes(e.key)) return
       e.preventDefault()
-      if (ph === 'revealed') next(); else if (ph === 'intro' || ph === 'suspense') open()
+      if (ph === 'revealed') next(); else if (ph === 'intro' || ph === 'suspense') go()
     }
     window.addEventListener('keydown', h); return () => window.removeEventListener('keydown', h)
   })
@@ -90,7 +98,7 @@ export default function Reveal({ cats, members, res, onClose }: { cats: Cat[]; m
           <button className={!asc ? 'on' : ''} onClick={() => setAsc(false)}>Do 15º ao 1º</button>
           <button className={asc ? 'on' : ''} onClick={() => setAsc(true)}>Do 1º ao 15º</button>
         </div>
-        <button className="gold big" onClick={() => setStarted(true)} disabled={!items.length}>Começar apuração</button>
+        <button className="gold big" onClick={() => { initAudio(); setStarted(true) }} disabled={!items.length}>Começar apuração</button>
       </div>
     </div>)
 
@@ -107,18 +115,22 @@ export default function Reveal({ cats, members, res, onClose }: { cats: Cat[]; m
                   <div key={w.m.id} className="fone"><div className="fpic"><Framed m={w.m} /></div><b>{w.m.name}</b></div>))}</div>)}
             </div>))}
         </div>
-        <div className="row"><button className="ghost" onClick={() => { setFin(false); setI(0) }}>Rever apuração</button><button className="gold" onClick={onClose}>Fechar</button></div>
+        <div className="row"><button className="ghost" onClick={() => { stopAll(); setFin(false); setI(0) }}>Rever apuração</button><button className="gold" onClick={onClose}>Fechar</button></div>
       </div>
     </div>)
 
   const cur = items[i]; const opened = ph === 'opening' || ph === 'revealed'
+  const toggleMute = () => { setMuted(!mute); setMute(!mute) }
   return (
-    <div className="rv"><button className="ghost rvx" onClick={onClose}>✕ Sair</button><Confetti shot={shot} />
+    <div className="rv"><button className="ghost rvx" onClick={onClose}>✕ Sair</button>
+      <button className="ghost rvm" onClick={toggleMute} aria-label="Som">{mute ? '🔇 Mudo' : '🔊 Som'}</button><Confetti shot={shot} />
       <div className="rvc">
-        <small className="plc">Colocação {cur.pos}º</small>
-        <h2 className="rvt">{cur.c.title}</h2>
-        <div className="theater">
-          <div className="valance" />
+        <div key={i} className="rvin">
+          <small className="plc">Colocação {cur.pos}º</small>
+          <h2 className="rvt">{cur.c.title}</h2>
+        </div>
+        <div className={'theater' + (ph === 'pause' ? ' dim' : '') + (opened ? ' lit' : '')}>
+          <div className="floor" /><div className="beam b1" /><div className="beam b2" />
           {opened && (
             <div className="winners">
               {cur.winners.length === 0 ? <p className="rvn">Sem votos nesta indicação</p> : cur.winners.map(w => (
@@ -128,13 +140,16 @@ export default function Reveal({ cats, members, res, onClose }: { cats: Cat[]; m
                   <small>{w.total} {w.total === 1 ? 'voto' : 'votos'} · Grupo {w.a} · Popular {w.b}</small>
                 </div>))}
             </div>)}
+          <div className={'glow' + (ph === 'suspense' ? ' on' : '') + (ph === 'pause' ? ' full' : '')} />
           <div className={'curtain l' + (opened ? ' open' : '') + (ph === 'suspense' ? ' shake' : '')} />
           <div className={'curtain r' + (opened ? ' open' : '') + (ph === 'suspense' ? ' shake' : '')} />
+          <div className="valance" />
+          {ph === 'opening' && <div className="flash" />}
         </div>
         <p className={'cap' + (ph === 'suspense' ? ' pulse' : '')}>
           {ph === 'intro' && 'Prepare-se…'}{ph === 'suspense' && <>E o vencedor é<span className="dots" /></>}{ph === 'revealed' && cur.winners.length > 1 && 'Empate!'}
         </p>
-        {(ph === 'intro' || ph === 'suspense') && <button className="ghost" onClick={open}>Revelar agora</button>}
+        {(ph === 'intro' || ph === 'suspense') && <button className="ghost" onClick={go}>Revelar agora</button>}
         {ph === 'revealed' && <button className="gold big" onClick={next}>{i < items.length - 1 ? 'Próxima categoria →' : 'Ver todos os vencedores'}</button>}
       </div>
     </div>)

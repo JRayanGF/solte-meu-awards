@@ -166,3 +166,37 @@ background:linear-gradient(100deg,#b8892b 15%,var(--gold2) 50%,#b8892b 85%);-web
 .fp{font:600 .7rem var(--serif);letter-spacing:.2em;color:var(--gold)}.ft{font:700 .88rem var(--sans);min-height:2.4em;display:flex;align-items:center}
 .fw{display:flex;gap:.6rem;flex-wrap:wrap;justify-content:center}.fone{display:flex;flex-direction:column;align-items:center;gap:.3rem}
 .fpic{width:100px}.fone b{color:var(--gold2);font:800 1rem var(--serif)}
+
+/* Teatro: cortina realista, holofotes e luz */
+.rvm{position:fixed;top:.8rem;left:.8rem;z-index:8;padding:.5rem .9rem;font-size:.9rem;background:#0b0a10cc}
+.rvin{display:flex;flex-direction:column;align-items:center;gap:.6rem;animation:rvup .7s cubic-bezier(.2,.8,.2,1) both}
+@keyframes rvup{from{opacity:0;transform:translateY(18px) scale(.96)}to{opacity:1;transform:none}}
+.theater{transition:filter .4s;box-shadow:0 0 0 1px #000,0 0 60px #d9b24c33,inset 0 0 80px #000a}
+.theater.dim{filter:brightness(.55)}
+.theater .floor{position:absolute;left:0;right:0;bottom:0;height:16%;z-index:0;background:linear-gradient(#2a1c0a,#07050a);border-top:1px solid #d9b24c66}
+.theater .beam{position:absolute;top:44px;bottom:0;width:46%;z-index:0;opacity:0;transition:opacity 1.6s;mix-blend-mode:screen;
+ background:linear-gradient(180deg,rgba(255,238,180,.34),rgba(255,238,180,0) 88%);clip-path:polygon(44% 0,56% 0,100% 100%,0 100%);animation:swing 5s ease-in-out infinite alternate}
+.theater .beam.b1{left:2%;transform-origin:50% 0}.theater .beam.b2{right:2%;animation-delay:-2.5s}
+.theater.lit .beam{opacity:1}
+@keyframes swing{from{transform:rotate(-7deg)}to{transform:rotate(7deg)}}
+.theater .winners{inset:46px 0 14%;z-index:1}
+.win>div{filter:drop-shadow(0 0 26px #d9b24c88)}
+.win h3{animation:rise .8s .25s cubic-bezier(.2,.8,.2,1) both}.win small{animation:rise .8s .45s both}
+@keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+.theater .valance{height:46px;z-index:5;background:linear-gradient(#8a1020,#4a0912);border-bottom:3px solid var(--gold);box-shadow:0 8px 16px #0009}
+.theater .valance::after{content:'';position:absolute;left:0;right:0;top:100%;height:24px;background:radial-gradient(circle at 50% 0,#6d0b18 0 56%,transparent 57%) 0 0/64px 24px repeat-x;filter:drop-shadow(0 3px 2px #000a)}
+.theater .curtain{width:50.6%;z-index:3;transition:transform 2.1s cubic-bezier(.65,0,.25,1);
+ background:linear-gradient(180deg,rgba(0,0,0,.6) 0,transparent 24%,transparent 68%,rgba(0,0,0,.5) 100%),
+ repeating-linear-gradient(90deg,#4d0610 0 8px,#8e1224 8px 22px,#c3243c 22px 30px,#9c1628 30px 40px,#4d0610 40px 50px);box-shadow:inset 0 -26px 36px #000a}
+.theater .curtain::after{height:14px;background:repeating-linear-gradient(90deg,#f6e3a1 0 3px,#b8892b 3px 7px);box-shadow:0 -2px 6px #0008}
+.theater .curtain.l{transform-origin:left center;animation:sway 5s ease-in-out infinite}
+.theater .curtain.r{transform-origin:right center;animation:sway 5s ease-in-out infinite reverse}
+@keyframes sway{0%,100%{transform:skewX(0)}50%{transform:skewX(.7deg)}}
+.theater .curtain.shake{animation:tremble .09s linear infinite alternate}
+@keyframes tremble{from{transform:translateX(-2px) skewX(-.6deg)}to{transform:translateX(2px) skewX(.6deg)}}
+.theater .curtain.l.open{animation:none;transform:scaleX(.13)}.theater .curtain.r.open{animation:none;transform:scaleX(.13)}
+.theater .glow{position:absolute;left:50%;top:46px;bottom:0;width:6px;transform:translateX(-50%);z-index:2;opacity:0;filter:blur(7px);background:linear-gradient(#fff8d0,#ffd36e,#fff8d0)}
+.theater .glow.on{animation:glowup 4.8s ease-in forwards}.theater .glow.full{opacity:1;width:16px;transition:all .4s}
+@keyframes glowup{from{opacity:0}to{opacity:.85}}
+.theater .flash{position:absolute;inset:0;z-index:6;pointer-events:none;background:radial-gradient(circle at 50% 55%,#fff8d6,transparent 62%);animation:flash 1.3s ease-out forwards}
+@keyframes flash{0%{opacity:0}18%{opacity:.9}100%{opacity:0}}
