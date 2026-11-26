@@ -130,3 +130,8 @@ background:linear-gradient(100deg,#b8892b 15%,var(--gold2) 50%,#b8892b 85%);-web
 .ind p{margin:0;color:var(--mute);font-size:.9rem}
 .indm{margin:.2rem 0 .1rem;font:800 1.5rem/1.15 var(--serif);color:var(--gold2)}
 .plate{white-space:normal;overflow:visible;text-overflow:clip;text-align:center;line-height:1.25}
+
+.hslot{display:grid;grid-template-columns:48px 1fr;gap:.5rem .7rem;align-items:center;padding:.7rem .8rem}
+.hslot input{grid-column:2}.hslot .filebtn,.hslot .gold,.hslot .link{grid-column:2;justify-self:start}
+.hslot.empty{border-style:dashed}
+.sm{padding:.5rem .9rem;font-size:.9rem}

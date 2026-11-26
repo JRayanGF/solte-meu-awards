@@ -1,6 +1,6 @@
 import { supabase } from './supabase'
 
-export type Member = { id: string; name: string; photo_path: string | null; nickname: string | null }
+export type Member = { id: string; name: string; photo_path: string | null; nickname: string | null; honorary: boolean }
 
 export const photoUrl = (path: string | null) =>
   path ? supabase.storage.from('member-photos').getPublicUrl(path).data.publicUrl : null

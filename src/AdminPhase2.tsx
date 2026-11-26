@@ -3,7 +3,7 @@ import { adminClient as sb } from './supabase'
 import { errMsg } from './lib'
 import { Avatar, Member, squareJpeg } from './photo'
 
-type Cat = { id: string; title: string; pos: number | null }
+type Cat = { id: string; title: string; pos: number | null; honorary: boolean }
 type Row = { key: string; label: string; m?: Member; a: number; b: number }
 type Res = { category_id: string; nominee_id: string; member_votes: number; popular_votes: number }
 
@@ -25,11 +25,14 @@ export default function AdminPhase2({ stage, onChange }: { stage: string; onChan
   const [sum, setSum] = useState({ member_voters: 0, popular_voters: 0 }); const [err, setErr] = useState('')
   const [name, setName] = useState(''); const [file, setFile] = useState<File | null>(null); const [pw, setPw] = useState('12345')
   const [busy, setBusy] = useState(false); const [fk, setFk] = useState(0)
-  const [tab, setTab] = useState<'m' | 'a'>('m'); const [nicks, setNicks] = useState<Record<string, string>>({})
+  const [tab, setTab] = useState<'m' | 'a' | 'h'>('m');
+  const [hd, setHd] = useState<Record<string, { name?: string; nick?: string; file?: File }>>({})
+  const [empties, setEmpties] = useState<string[]>(['n1', 'n2', 'n3', 'n4', 'n5']); const [nid, setNid] = useState(6)
+  const [nicks, setNicks] = useState<Record<string, string>>({})
 
   const load = useCallback(async () => {
     const [m, c, r, s] = await Promise.all([
-      sb.from('members').select('id,name,photo_path,nickname').order('created_at'), sb.rpc('phase2_categories'),
+      sb.from('members').select('id,name,photo_path,nickname,honorary').order('created_at'), sb.rpc('phase2_categories'),
       sb.rpc('winner_results'), sb.rpc('winner_summary')])
     const e = m.error || c.error || r.error || s.error
     if (e) return setErr(errMsg(e))
@@ -78,6 +81,38 @@ export default function AdminPhase2({ stage, onChange }: { stage: string; onChan
       setNicks({}); load()
     } catch (e) { setErr(errMsg(e)) } finally { setBusy(false) }
   }
+  const patchHd = (k: string, v: { name?: string; nick?: string; file?: File }) => setHd(d => ({ ...d, [k]: { ...d[k], ...v } }))
+  async function saveHonor(key: string, ex?: Member) {
+    const d = hd[key] ?? {}
+    const nm = (d.name ?? ex?.name ?? '').trim().replace(/\s+/g, ' ')
+    const nick = (d.nick ?? ex?.nickname ?? '').trim().replace(/\s+/g, ' ') || null
+    if (nm.length < 2) return setErr('Digite o nome do indicado.')
+    if (!ex && !d.file) return setErr('Escolha a foto do indicado.')
+    setErr(''); setBusy(true)
+    try {
+      let id = ex?.id
+      if (!id) {
+        const { data, error } = await sb.from('members').insert({ name: nm, nickname: nick, honorary: true }).select('id').single()
+        if (error) throw error
+        id = data.id as string
+      } else {
+        const { error } = await sb.from('members').update({ name: nm, nickname: nick }).eq('id', id); if (error) throw error
+      }
+      if (d.file) {
+        const blob = await squareJpeg(d.file); const path = `${id}-${Date.now()}.jpg`
+        const up = await sb.storage.from('member-photos').upload(path, blob, { contentType: 'image/jpeg' }); if (up.error) throw up.error
+        const u = await sb.from('members').update({ photo_path: path }).eq('id', id); if (u.error) throw u.error
+        if (ex?.photo_path) await sb.storage.from('member-photos').remove([ex.photo_path])
+      }
+      setHd(({ [key]: _gone, ...rest }) => rest)
+      if (!ex) setEmpties(l => l.filter(x => x !== key))
+      load()
+    } catch (e) { setErr(errMsg(e)) } finally { setBusy(false) }
+  }
+  async function setHonorCat(v: string) {
+    const { error } = await sb.rpc('admin_set_honorary_category', { p_category: v || null })
+    if (error) setErr(errMsg(error)); else { setErr(''); load() }
+  }
   async function changePw(m: Member) {
     const v = window.prompt(`Nova senha de ${m.name}:`, '12345'); if (v === null) return
     const { error } = await sb.rpc('admin_set_member_password', { p_member: m.id, p_password: v.trim() })
@@ -102,9 +137,10 @@ export default function AdminPhase2({ stage, onChange }: { stage: string; onChan
     if (error) setErr(errMsg(error)); else { setErr(''); onChange() }
   }
 
+  const regular = members.filter(m => !m.honorary); const honor = members.filter(m => m.honorary)
   const tot = new Map<string, { a: number; b: number }>()
   res.forEach(r => { const t = tot.get(r.nominee_id) ?? { a: 0, b: 0 }; t.a += r.member_votes; t.b += r.popular_votes; tot.set(r.nominee_id, t) })
-  const overall: Row[] = members.map(m => ({ key: m.id, label: m.name, m, a: tot.get(m.id)?.a ?? 0, b: tot.get(m.id)?.b ?? 0 }))
+  const overall: Row[] = regular.map(m => ({ key: m.id, label: m.name, m, a: tot.get(m.id)?.a ?? 0, b: tot.get(m.id)?.b ?? 0 }))
     .sort((x, y) => (y.a + y.b) - (x.a + x.b))
   const perCat: Row[] = cats.map(c => {
     const rs = res.filter(r => r.category_id === c.id)
@@ -135,10 +171,11 @@ export default function AdminPhase2({ stage, onChange }: { stage: string; onChan
       {stage === 'winners_test' && <p className="hint">Teste aberto: vote em /teste (como membro ou popular), confira os gráficos abaixo e depois clique em “Finalizar teste”.</p>}
       {err && <p className="err" role="alert">{err}</p>}
 
-      <h3 className="sec">Membros do grupo ({members.length})</h3>
+      <h3 className="sec">Membros do grupo ({regular.length})</h3>
       <div className="tabs">
         <button className={tab === 'm' ? 'on' : ''} onClick={() => setTab('m')}>Membros</button>
         <button className={tab === 'a' ? 'on' : ''} onClick={() => setTab('a')}>Apelidos</button>
+        <button className={tab === 'h' ? 'on' : ''} onClick={() => setTab('h')}>Honorário</button>
       </div>
       {tab === 'm' ? (<>
         <p className="hint">Cada membro tem login (senha padrão 12345). Use o botão “Foto” para colocar a foto de cada um.</p>
@@ -149,22 +186,45 @@ export default function AdminPhase2({ stage, onChange }: { stage: string; onChan
           <button className="gold" disabled={busy}>{busy ? 'Salvando…' : 'Adicionar membro'}</button>
         </form>
         <div className="mlist">
-          {members.map(m => (
+          {regular.map(m => (
             <div key={m.id} className="card mrow"><Avatar m={m} size={56} />
               <div className="grow"><b>{m.name}</b>{m.nickname && <small className="sub"> “{m.nickname}”</small>}{!m.photo_path && <small className="hint"> · sem foto</small>}</div>
               <label className="link sublink filebtn">Foto<input type="file" accept="image/*" hidden disabled={busy} onChange={e => { changePhoto(m, e.target.files?.[0]); e.target.value = '' }} /></label>
               <button className="link sublink" onClick={() => changePw(m)}>Senha</button>
               <button className="link" onClick={() => remove(m)}>Remover</button></div>))}
         </div>
-      </>) : (<>
+      </>) : tab === 'a' ? (<>
         <p className="hint">O apelido aparece embaixo do nome na votação. Deixe vazio para não mostrar.</p>
         <div className="mlist">
-          {members.map(m => (
+          {regular.map(m => (
             <div key={m.id} className="card mrow"><Avatar m={m} size={44} /><b className="nm">{m.name}</b>
               <input className="grow" value={nicks[m.id] ?? m.nickname ?? ''} maxLength={30} placeholder="Apelido"
                 onChange={e => setNicks({ ...nicks, [m.id]: e.target.value })} /></div>))}
         </div>
         <button className="gold" onClick={saveNicks} disabled={busy || !Object.keys(nicks).length}>{busy ? 'Salvando…' : 'Salvar apelidos'}</button>
+      </>) : (<>
+        <p className="hint">Indicação em que os votos vão para estas pessoas (e não para os 12 membros):</p>
+        <select value={cats.find(c => c.honorary)?.id ?? ''} onChange={e => setHonorCat(e.target.value)} disabled={stage === 'winners_open' || stage === 'winners_test'}>
+          <option value="">Nenhuma</option>
+          {cats.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
+        </select>
+        <p className="hint">Indicados ({honor.length}). Preencha nome e foto, clique em Salvar e use “+” para abrir mais um espaço.</p>
+        <div className="mlist">
+          {honor.map(m => { const d = hd[m.id] ?? {}; const dirty = d.name !== undefined || d.nick !== undefined || !!d.file; return (
+            <div key={m.id} className="card hslot"><Avatar m={m} size={48} />
+              <input value={d.name ?? m.name} maxLength={40} onChange={e => patchHd(m.id, { name: e.target.value })} placeholder="Nome" />
+              <input value={d.nick ?? m.nickname ?? ''} maxLength={30} onChange={e => patchHd(m.id, { nick: e.target.value })} placeholder="Apelido (opcional)" />
+              <label className="link sublink filebtn">{d.file ? 'Foto ✓' : 'Foto'}<input type="file" accept="image/*" hidden onChange={e => { patchHd(m.id, { file: e.target.files?.[0] }); e.target.value = '' }} /></label>
+              <button className="gold sm" disabled={busy || !dirty} onClick={() => saveHonor(m.id, m)}>Salvar</button>
+              <button className="link" onClick={() => remove(m)}>Remover</button></div>) })}
+          {empties.map((k, i) => { const d = hd[k] ?? {}; return (
+            <div key={k} className="card hslot empty"><span className="av ph" style={{ width: 48, height: 48 }}>{honor.length + i + 1}</span>
+              <input value={d.name ?? ''} maxLength={40} onChange={e => patchHd(k, { name: e.target.value })} placeholder="Nome do indicado" />
+              <input value={d.nick ?? ''} maxLength={30} onChange={e => patchHd(k, { nick: e.target.value })} placeholder="Apelido (opcional)" />
+              <label className="link sublink filebtn">{d.file ? 'Foto ✓' : 'Foto'}<input type="file" accept="image/*" hidden onChange={e => { patchHd(k, { file: e.target.files?.[0] }); e.target.value = '' }} /></label>
+              <button className="gold sm" disabled={busy || !d.name?.trim() || !d.file} onClick={() => saveHonor(k)}>Salvar</button></div>) })}
+        </div>
+        <button className="ghost" onClick={() => { setEmpties(l => [...l, 'n' + nid]); setNid(n => n + 1) }}>+ Adicionar mais um espaço</button>
       </>)}
 
       <h3 className="sec">Resultados</h3>

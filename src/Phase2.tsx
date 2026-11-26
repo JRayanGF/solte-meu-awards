@@ -5,7 +5,7 @@ import { Brand } from './App'
 import { Avatar, Framed, Member, NameTag } from './photo'
 
 type Db = typeof supabase
-type Cat = { id: string; title: string; pos: number | null }
+type Cat = { id: string; title: string; pos: number | null; honorary: boolean }
 const FLAG = 'sma-popular'
 const getFlag = (k: string) => { try { return localStorage.getItem(k) === '1' } catch { return false } }
 const setFlag = (k: string, v: boolean) => { try { if (v) localStorage.setItem(k, '1'); else localStorage.removeItem(k) } catch { /* ignora */ } }
@@ -54,7 +54,7 @@ export default function Phase2({ client = supabase, test = false }: { client?: D
 
   const load = useCallback(async () => {
     const [m, c, v, s] = await Promise.all([
-      db.from('members').select('id,name,photo_path,nickname').order('created_at'),
+      db.from('members').select('id,name,photo_path,nickname,honorary').order('created_at'),
       db.rpc('phase2_categories'),
       db.from('winner_votes').select('category_id,nominee_id'),
       db.from('member_sessions').select('member_id').maybeSingle()])
@@ -84,8 +84,9 @@ export default function Phase2({ client = supabase, test = false }: { client?: D
   }
 
   if (mode === 'load') return <main className="stage hero"><Brand />{err ? <p className="err" role="alert">{err}</p> : <p className="lead pulse">Carregando…</p>}</main>
-  if (!members.length || !cats.length) return <main className="stage hero"><Brand /><p className="lead">A votação ainda não foi configurada. Volte em instantes.</p></main>
-  if (mode === 'login') return <Login db={db} members={members} onMember={load} onPopular={() => { setFlag(fk, true); setMode('vote') }} />
+  const regular = members.filter(m => !m.honorary); const honor = members.filter(m => m.honorary)
+  if (!regular.length || !cats.length) return <main className="stage hero"><Brand /><p className="lead">A votação ainda não foi configurada. Volte em instantes.</p></main>
+  if (mode === 'login') return <Login db={db} members={regular} onMember={load} onPopular={() => { setFlag(fk, true); setMode('vote') }} />
 
   const byId = new Map(members.map(m => [m.id, m])); const meM = me ? byId.get(me) : null
   const done = cats.filter(c => votes[c.id]).length; const all = done === cats.length
@@ -105,8 +106,9 @@ export default function Phase2({ client = supabase, test = false }: { client?: D
         <p>Quem merece ganhar? Toque na foto.</p>
       </div>
       <div className="members">
-        {members.map(m => <button key={m.id} className="mem" onClick={() => setPick(m)}><Framed m={m} /><NameTag m={m} /></button>)}
+        {(cat.honorary ? honor : regular).map(m => <button key={m.id} className="mem" onClick={() => setPick(m)}><Framed m={m} /><NameTag m={m} /></button>)}
       </div>
+      {cat.honorary && honor.length === 0 && <p className="err">Os indicados desta categoria ainda não foram definidos.</p>}
       {err && <p className="err" role="alert">{err}</p>}
       {pick && (
         <div className="modal" role="dialog" aria-modal="true">
