@@ -200,3 +200,12 @@ background:linear-gradient(100deg,#b8892b 15%,var(--gold2) 50%,#b8892b 85%);-web
 @keyframes glowup{from{opacity:0}to{opacity:.85}}
 .theater .flash{position:absolute;inset:0;z-index:6;pointer-events:none;background:radial-gradient(circle at 50% 55%,#fff8d6,transparent 62%);animation:flash 1.3s ease-out forwards}
 @keyframes flash{0%{opacity:0}18%{opacity:.9}100%{opacity:0}}
+
+/* Ajuste de iluminação: luz atrás do vencedor, sem lavar a foto */
+.theater .beam{z-index:0;mix-blend-mode:normal;opacity:0;background:linear-gradient(180deg,rgba(255,236,170,.17),rgba(255,236,170,0) 85%);will-change:transform}
+.theater.lit .beam{opacity:1}
+.theater .flash{z-index:1;background:radial-gradient(circle at 50% 50%,rgba(255,244,200,.7),transparent 55%);animation:flash2 .9s ease-out forwards}
+@keyframes flash2{0%{opacity:0}20%{opacity:.7}100%{opacity:0}}
+.theater .winners{z-index:2}
+.theater .glow{z-index:2}
+.win>div{filter:drop-shadow(0 0 16px rgba(217,178,76,.5))}
